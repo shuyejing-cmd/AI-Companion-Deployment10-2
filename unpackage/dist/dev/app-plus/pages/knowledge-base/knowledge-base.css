@@ -1,0 +1,63 @@
+
+body {
+	background-color: #f7f8fa; /* cite: 1 */
+	font-size: 1rem; /* cite: 1 */
+}
+.settings-container {
+	padding-top: 0.625rem; /* cite: 2 */
+}
+.menu-group {
+	background-color: #fff;
+}
+.menu-item {
+	display: flex; /* cite: 3 */
+	align-items: center; /* cite: 3 */
+	justify-content: space-between; /* cite: 3 */
+	padding: 0.9375rem; /* cite: 3 */
+	position: relative; /* cite: 3 */
+	transition: background-color 0.2s; /* cite: 3 */
+}
+.menu-item:active {
+	background-color: #f7f8fa; /* cite: 4 */
+}
+.menu-item::after {
+	content: ''; /* cite: 5 */
+	position: absolute; /* cite: 5 */
+	left: 0.9375rem; /* cite: 5 */
+	right: 0; /* cite: 5 */
+	bottom: 0; /* cite: 5 */
+	height: 0.03125rem; /* cite: 5 */
+	background-color: #f0f0f0; /* cite: 5 */
+}
+.menu-item:last-child::after {
+	display: none;
+}
+.menu-label {
+	color: #333; /* cite: 6 */
+}
+.arrow-icon {
+	width: 0.875rem; /* cite: 7 */
+	height: 0.875rem; /* cite: 7 */
+	opacity: 0.4; /* cite: 7 */
+}
+.danger-zone {
+	margin-top: 3.75rem; /* cite: 8 */
+	padding: 0 1.25rem; /* cite: 8 */
+	border-top: 0.03125rem solid #e5e5e5; /* cite: 8 */
+	padding-top: 1.25rem; /* cite: 8 */
+}
+.danger-zone-title {
+	font-size: 0.875rem; /* cite: 9 */
+	color: #999; /* cite: 9 */
+	margin-bottom: 0.625rem; /* cite: 9 */
+}
+.delete-button {
+	background-color: #fa5151; /* cite: 10 */
+	color: white; /* cite: 10 */
+}
+.danger-zone-tip {
+	font-size: 0.75rem; /* cite: 10 */
+	color: #aaa; /* cite: 10 */
+	margin-top: 0.625rem; /* cite: 10 */
+	text-align: center; /* cite: 10 */
+}

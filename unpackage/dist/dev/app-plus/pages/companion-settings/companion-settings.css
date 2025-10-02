@@ -1,0 +1,27 @@
+
+.container[data-v-021beadd] { padding: 0.9375rem;
+}
+.file-list-container[data-v-021beadd] { background-color: #fff; border-radius: 0.5rem; padding: 0.3125rem 0.9375rem; margin-bottom: 1.25rem; min-height: 6.25rem; display: flex; flex-direction: column; justify-content: center;
+}
+.file-item[data-v-021beadd] { display: flex; justify-content: space-between; align-items: center; padding: 0.78125rem 0; border-bottom: 0.03125rem solid #f0f0f0;
+}
+.file-item[data-v-021beadd]:last-child { border-bottom: none;
+}
+.file-info[data-v-021beadd] { display: flex; flex-direction: column; flex-grow: 1; margin-right: 0.625rem;
+}
+.file-name[data-v-021beadd] { color: #333; font-size: 0.9375rem; margin-bottom: 0.15625rem; word-break: break-all;
+}
+.file-status[data-v-021beadd] { font-size: 0.75rem;
+}
+.file-status.INDEXED[data-v-021beadd] { color: #07c160;
+}
+.file-status.PROCESSING[data-v-021beadd] { color: #007aff;
+}
+.file-status.FAILED[data-v-021beadd] { color: #fa5151;
+}
+.delete-btn[data-v-021beadd] { background-color: #fa5151; color: white; margin: 0; font-size: 0.75rem; flex-shrink: 0;
+}
+.empty-tip[data-v-021beadd], .loading-tip[data-v-021beadd] { text-align: center; color: #999; padding: 2.5rem 0;
+}
+.upload-btn[data-v-021beadd] { background-color: #007aff; color: white;
+}

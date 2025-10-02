@@ -1,0 +1,96 @@
+
+/* 您的样式大部分都很好，我做了一些微调和补全 */
+body, .chat-page {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+.global-bg {
+	position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+	background: linear-gradient(120deg, #fde4ea 0%, #a6c0fe 100%);
+	z-index: -1;
+}
+.custom-nav-bar {
+	position: fixed; top: 0; left: 0; width: 100%;
+	background-color: rgba(255,255,255,0.8);
+	-webkit-backdrop-filter: blur(10px);
+	        backdrop-filter: blur(10px);
+	z-index: 100;
+	border-bottom: 0.03125rem solid #e0e0e0;
+}
+.nav-bar-content {
+	position: relative; display: flex; align-items: center; justify-content: center; height: 44px;
+}
+.back-button {
+	position: absolute; left: 0.625rem; top: 50%; transform: translateY(-50%); padding: 0.3125rem;
+}
+.back-icon { width: 1.125rem; height: 1.125rem;
+}
+.title-container { display: flex; align-items: center; padding: 0.3125rem 0.625rem; border-radius: 0.5rem; transition: background-color 0.2s;
+}
+.title-container:active { background-color: rgba(0, 0, 0, 0.1);
+}
+.nav-bar-title { font-size: 1.0625rem; font-weight: 600; color: #333;
+}
+.settings-entry-icon { width: 0.875rem; height: 0.875rem; margin-left: 0.3125rem; opacity: 0.5;
+}
+.chat-container {
+	width: 100%;
+	flex: 1;
+	box-sizing: border-box;
+}
+.message-list { padding: 0.625rem;
+}
+.message-item { display: flex; margin-bottom: 0.9375rem;
+}
+.avatar { width: 2.5rem; height: 2.5rem; border-radius: 0.3125rem; flex-shrink: 0;
+}
+.message-content {
+	padding: 0.6875rem 0.8125rem; border-radius: 0.625rem; max-width: 65%;
+	word-break: break-all; position: relative; font-size: 1rem;
+	line-height: 1.5; box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.05);
+}
+.ai-message .avatar { margin-right: 0.625rem;
+}
+.ai-message .message-content { background-color: #ffffff; color: #333;
+}
+.user-message { flex-direction: row-reverse;
+}
+.user-message .avatar { margin-left: 0.625rem;
+}
+.user-message .message-content { background-color: #88d46a; color: #fff;
+}
+
+/* --- 补全的输入框样式 --- */
+.input-bar-container {
+	position: fixed; bottom: 0; left: 0; right: 0; width: 100%;
+	background-color: #f7f7f7; border-top: 0.03125rem solid #e0e0e0;
+	padding-bottom: constant(safe-area-inset-bottom);
+	padding-bottom: env(safe-area-inset-bottom);
+	z-index: 100;
+}
+.input-bar {
+	display: flex; align-items: center; padding: 0.5rem 0.625rem;
+}
+.input-field {
+	flex: 1; height: 2.375rem; background-color: #fff; border-radius: 0.3125rem;
+	padding: 0 0.625rem; font-size: 1rem; box-sizing: border-box;
+}
+.send-button {
+	width: 3.75rem; height: 2.375rem; padding: 0; font-size: 0.9375rem;
+	line-height: 2.375rem; margin-left: 0.625rem; background-color: #f0f0f0;
+	color: #b2b2b2;
+}
+.send-button:not([disabled]) { background-color: #07c160; color: #fff;
+}
+/* --- 样式补全结束 --- */
+.cursor { display: inline-block; width: 0.4375rem; height: 1.125rem; background-color: #333; animation: blink 1s infinite; vertical-align: text-bottom; margin-left: 0.15625rem;
+}
+@keyframes blink {
+0%, 100% { opacity: 1;
+}
+50% { opacity: 0;
+}
+}
+.time-stamp { text-align: center; margin: 0.625rem auto; padding: 0.25rem 0.625rem; background-color: rgba(0, 0, 0, 0.1); color: #fff; font-size: 0.75rem; border-radius: 0.25rem; display: inline-block; left: 50%; transform: translateX(-50%); position: relative;
+}
