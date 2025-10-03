@@ -1,22 +1,19 @@
+// main.js
 import App from './App'
-
-// #ifndef VUE3
-import Vue from 'vue'
-import './uni.promisify.adaptor'
-Vue.config.productionTip = false
-App.mpType = 'app'
-const app = new Vue({
-  ...App
-})
-app.$mount()
-// #endif
-
-// #ifdef VUE3
 import { createSSRApp } from 'vue'
+
+// 1. 引入 Pinia
+import * as Pinia from 'pinia';
+
 export function createApp() {
   const app = createSSRApp(App)
+
+  // 2. 创建 Pinia 实例并挂载
+  const pinia = Pinia.createPinia();
+  app.use(pinia);
+
   return {
-    app
+    app,
+    Pinia, // HBuilderX 最新版本需要同时导出 Pinia
   }
 }
-// #endif

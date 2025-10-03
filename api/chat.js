@@ -1,4 +1,4 @@
-import request from './request';
+import request from '@/utils/request.js';
 
 /**
  * 获取指定伙伴的历史聊天记录

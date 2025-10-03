@@ -13,70 +13,44 @@
 	</view>
 </template>
 
-<script>
-import { login } from '../../api/auth.js';
-import { setToken } from '../../utils/auth.js';
+<script setup>
+import { reactive } from 'vue';
+import { useUserStore } from '@/stores/user.js';
 
-export default {
-	data() {
-		return {
-			loginForm: {
-				email: '',
-				password: ''
-			}
-		};
-	},
-	methods: {
-		handleLogin() {
-			if (!this.loginForm.email || !this.loginForm.password) {
-				uni.showToast({ title: '邮箱和密码不能为空', icon: 'none' });
-				return;
-			}
-			
-			uni.showLoading({ title: '登录中...' });
-			
-			login(this.loginForm)
-				.then(response => {
-					const token = response.access_token;
-					
-					if (token) {
-						setToken(token);
-						uni.showToast({
-							title: '登录成功！',
-							icon: 'success'
-						});
-						
-						setTimeout(() => {
-							uni.switchTab({
-								url: '/pages/index/index' // 请确保这是您的主页路径
-							});
-						}, 1500);
-						
-					} else {
-						// 如果后端成功返回但没有token，作为一种异常情况处理
-						throw new Error('未能从服务器获取Token');
-					}
-				})
-				.catch(error => {
-					console.error("登录失败: ", error);
-                    // 统一从 error.data 中获取后端返回的错误信息
-                    const errorMsg = error.data?.detail || '登录失败，请检查您的凭证';
-					uni.showToast({
-						title: errorMsg,
-						icon: 'none'
-					});
-				})
-				.finally(() => {
-					// 【重要】无论成功还是失败，最后都确保关闭加载提示
-					uni.hideLoading();
-				});
-		},
-		goToRegister() {
-			uni.navigateTo({
-				url: '/pages/register/register'
-			});
-		}
-	}
+// 1. 获取 user store 实例
+const userStore = useUserStore();
+
+// 2. 创建一个响应式对象来绑定表单数据
+const loginForm = reactive({
+    // [已修改] 将 username 属性改为 email
+    email: '',
+    password: ''
+});
+
+// 3. 定义登录处理函数
+const handleLogin = async () => {
+    // [已修改] 检查 email 字段，并更新提示信息
+    if (!loginForm.email || !loginForm.password) {
+        uni.showToast({ title: '请输入邮箱和密码', icon: 'none' });
+        return;
+    }
+    try {
+        // 4. 调用 store 的 action，把所有复杂逻辑都交给他
+        // 注意：请确保你的 userStore.login action 能处理包含 email 的对象
+        await userStore.login(loginForm);
+        // 登录成功后的跳转逻辑已在 store action 中处理
+    } catch (error) {
+        // 登录失败的提示已在 store action 中处理
+        // 这里可以根据需要做一些额外的UI处理，比如按钮禁用状态等
+        console.log('Login page caught an error.');
+    }
+};
+
+// 【新增】确保跳转到注册页的函数存在
+const goToRegister = () => {
+    uni.navigateTo({
+        url: '/pages/register/register'
+    });
 };
 </script>
 

@@ -1,6 +1,6 @@
-import request from './request';
-import { baseUrl } from '../config.js';
-import { getToken } from '../utils/auth.js';
+import request from '@/utils/request.js';
+import { baseUrl } from '@/config.js';
+import { getToken } from '@/utils/auth.js';
 
 /**
  * 获取指定伙伴的知识文件列表

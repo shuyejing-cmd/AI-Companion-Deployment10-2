@@ -21,7 +21,7 @@
 			:scroll-top="scrollTop"
 			:scroll-with-animation="true"
 		>
-			<view class="message-list" id="message-list">
+			<view class="message-list">
 				<block v-for="item in messages" :key="item._id">
 					<view v-if="item.displayTime" class="time-stamp">{{ item.displayTime }}</view>
 					<view class="message-item" :class="item.role === 'user' ? 'user-message' : 'ai-message'">
@@ -39,249 +39,102 @@
 		<view class="input-bar-container" id="input-bar-container">
 			<view class="input-bar">
 				<input
-					class="input-field"
-					v-model="inputValue"
-					placeholder="说点什么吧..."
-					confirm-type="send"
-					@confirm="sendMessage"
-					:disabled="isSending"
-					:adjust-position="false"
-					cursor-spacing="20"
+				    class="input-field"
+				    v-model="inputValue"
+				    placeholder="说点什么吧..."
+				    confirm-type="send"
+				    @confirm="handleSend"
+				    :disabled="isSending"
+				    :adjust-position="false"
+				    cursor-spacing="20"
 				/>
-				<button class="send-button" @click="sendMessage" :disabled="isSending || !inputValue.trim()">发送</button>
+				<button class="send-button" @click="handleSend" :disabled="isSending || !inputValue.trim()">发送</button>
 			</view>
 		</view>
 	</view>
 </template>
 
-<script>
-import * as chatApi from '../../api/chat.js';
-import * as companionApi from '../../api/companion.js';
-import { getToken } from '../../utils/auth.js'; // 使用我们封装的Token工具
+<script setup>
+import { ref , onMounted } from 'vue';
+// 【修正】从 @dcloudio/uni-app 导入所有生命周期钩子
+import { onLoad, onUnload } from '@dcloudio/uni-app';
+import { storeToRefs } from 'pinia';
+import { useChatStore } from '@/stores/chatStore.js';
 
-// 不再需要在顶层调用 getApp()
-// const app = getApp(); 
+// --- 页面局部状态 ---
+const companionId = ref(null);
+const companionName = ref('');
+const companionAvatar = ref('');
+const userAvatar = ref('/static/images/user-avatar.png');
+const inputValue = ref('');
 
-export default {
-	data() {
-		return {
-			companionId: null,
-			companionAvatar: '',
-			companionName: '',
-			userAvatar: '/static/images/user-avatar.png', 
-			messages: [],
-			inputValue: '',
-			isSending: false,
-			socketOpen: false,
-			socketTask: null,
-			scrollTop: 99999, // 初始滚动到底部
-			
-			// 动态计算的高度
-			statusBarHeight: 0,
-			navBarHeight: 0,
-			inputBarHeight: 50, // 输入框初始高度
-		};
-	},
-	onLoad(options) {
-		// --- 页面初始化 ---
-		if (!options.id) {
-			uni.showToast({ title: '参数错误', icon: 'none', duration: 2000, success: () => setTimeout(() => uni.navigateBack(), 2000) });
-			return;
-		}
-		this.companionId = options.id;
-		this.companionName = options.name || '聊天';
-		this.companionAvatar = options.avatar || '/static/images/default-avatar.png';
-		
-		this.calculateHeights(); // 计算导航栏等高度
-		this.loadHistoryMessages(); // 加载历史消息
-		this.connectWebSocket(); // 连接WebSocket
-	},
-	onReady() {
-		// 在 onReady 中获取输入框高度，更准确
-		this.calculateInputBarHeight();
-	},
-	onUnload() {
-		// 离开页面时关闭 WebSocket 连接
-		this.closeWebSocket();
-		// 移除事件监听，防止内存泄漏
-		const app = getApp();
-		if (app && app.event) {
-			app.event.off('companionUpdated', this.handleCompanionUpdate);
-		}
-	},
-	methods: {
-		// 动态计算各种高度，适配不同机型
-		calculateHeights() {
-			const systemInfo = uni.getSystemInfoSync();
-			this.statusBarHeight = systemInfo.statusBarHeight;
-			// #ifdef MP-WEIXIN
-			const menuButtonInfo = uni.getMenuButtonBoundingClientRect();
-			this.navBarHeight = menuButtonInfo.bottom + menuButtonInfo.top - systemInfo.statusBarHeight;
-			// #endif
-			// #ifndef MP-WEIXIN
-			this.navBarHeight = systemInfo.statusBarHeight + 44;
-			// #endif
-		},
-		calculateInputBarHeight() {
-			const query = uni.createSelectorQuery().in(this);
-			query.select('#input-bar-container').boundingClientRect(data => {
-				if (data) {
-					this.inputBarHeight = data.height;
-				}
-			}).exec();
-		},
-		
-		// --- 数据加载 ---
-		async loadHistoryMessages() {
-			uni.showLoading({ title: '加载记录中...' });
-			try {
-				const history = await chatApi.getMessages(this.companionId);
-				this.messages = this.processMessages(history);
-			} catch (err) {
-				console.error("加载历史消息失败", err);
-				uni.showToast({ title: '加载历史失败', icon: 'none' });
-			} finally {
-				uni.hideLoading();
-				this.$nextTick(() => this.scrollToBottom());
-			}
-		},
-		
-		// --- WebSocket 核心逻辑 ---
-		connectWebSocket() {
-			const token = getToken();
-			if (!token) {
-				uni.showToast({ title: '请先登录', icon: 'none' });
-				return;
-			}
-			
-			// 请确保您的 config.js 中有 baseUrl
-			// import { baseUrl } from '../../config.js'; 
-			const wsUrl = `ws://120.53.230.215:8000/api/v1/chat/ws/${this.companionId}?token=${encodeURIComponent(token)}`;
+// --- Pinia Store ---
+const chatStore = useChatStore();
+const { messages, isSending, scrollTop } = storeToRefs(chatStore);
 
-			this.socketTask = uni.connectSocket({
-				url: wsUrl,
-				success: () => {}, // success回调在H5平台无用
-				fail: (err) => {
-					console.error("WebSocket 连接失败", err);
-					uni.showToast({title: '连接聊天服务器失败', icon: 'none'});
-				}
-			});
-			this.onWebSocketEvents();
-		},
-		onWebSocketEvents() {
-			this.socketTask.onOpen(() => {
-				console.log("WebSocket 连接成功");
-				this.socketOpen = true;
-			});
-			this.socketTask.onClose(() => {
-				console.log("WebSocket 连接关闭");
-				this.socketOpen = false;
-				this.isSending = false;
-			});
-			this.socketTask.onError((err) => {
-				console.error("WebSocket 连接出错", err);
-				this.socketOpen = false;
-				this.isSending = false;
-				uni.showToast({ title: '连接已断开', icon: 'none' });
-			});
-			this.socketTask.onMessage((res) => {
-				const receivedText = res.data;
-				if (receivedText === '[END_OF_STREAM]') {
-					this.isSending = false;
-					const lastMsg = this.messages[this.messages.length - 1];
-					if (lastMsg && lastMsg.role === 'ai') {
-						lastMsg.done = true;
-					}
-					return;
-				}
-				if (receivedText.startsWith('[ERROR]')) {
-					uni.showToast({ title: 'AI 思考时出错了', icon: 'none' });
-					this.isSending = false;
-					return;
-				}
+// --- 动态高度 ---
+const statusBarHeight = ref(0);
+const navBarHeight = ref(0);
+const inputBarHeight = ref(50);
 
-				const lastMsg = this.messages[this.messages.length - 1];
-				if (lastMsg && lastMsg.role === 'ai' && !lastMsg.done) {
-					lastMsg.content += receivedText;
-				} else {
-					const newAiMessage = { role: 'ai', content: receivedText, done: false, created_at: new Date().toISOString() };
-					this.messages = this.processMessages([newAiMessage], this.messages);
-				}
-				this.$nextTick(() => this.scrollToBottom());
-			});
-		},
-		closeWebSocket() {
-			if (this.socketTask) {
-				this.socketTask.close();
-			}
-		},
-
-		// --- 用户交互 ---
-		sendMessage() {
-			const content = this.inputValue.trim();
-			if (!content || this.isSending || !this.socketOpen) return;
-
-			const userMessage = { role: 'user', content, created_at: new Date().toISOString() };
-			this.messages = this.processMessages([userMessage], this.messages);
-			
-			this.socketTask.send({ data: content });
-			
-			this.inputValue = '';
-			this.isSending = true;
-			this.$nextTick(() => this.scrollToBottom());
-		},
-		
-		// --- 导航 ---
-		navigateBack() {
-			uni.navigateBack();
-		},
-		navigateToSettings() {
-					// 修正跳转目标为“个性化设置”菜单页，并传递必要的参数
-					uni.navigateTo({
-						url: `/pages/knowledge-base/knowledge-base?id=${this.companionId}&name=${this.companionName}`
-					});
-		},
-		
-		// --- 工具函数 ---
-		scrollToBottom() {
-			this.$nextTick(() => {
-				uni.createSelectorQuery().in(this).select('#message-list').boundingClientRect(rect => {
-					if (rect) { this.scrollTop = rect.height; }
-				}).exec();
-			});
-		},
-		processMessages(newMessages, existingMessages = []) {
-			// ... 此处逻辑与您原代码一致，无需修改 ...
-			let lastTimestamp = existingMessages.length > 0 ? new Date(existingMessages[existingMessages.length - 1].created_at).getTime() : 0;
-			const tenMinutes = 10 * 60 * 1000;
-			newMessages.forEach(msg => {
-				msg._id = msg.id || msg.role + '_' + Date.now() + Math.random();
-				const currentTimestamp = new Date(msg.created_at).getTime();
-				if (currentTimestamp - lastTimestamp > tenMinutes) {
-					msg.displayTime = this.formatDisplayTime(currentTimestamp);
-				} else {
-					msg.displayTime = null;
-				}
-				lastTimestamp = currentTimestamp;
-				msg.done = msg.done === undefined ? true : msg.done;
-			});
-			return [...existingMessages, ...newMessages];
-		},
-		formatDisplayTime(timestamp) {
-			// ... 此处逻辑与您原代码一致，无需修改 ...
-			const date = new Date(timestamp);
-			const month = date.getMonth() + 1;
-			const day = date.getDate();
-			const hour = ('0' + date.getHours()).slice(-2);
-			const minute = ('0' + date.getMinutes()).slice(-2);
-			return `${month}月${day}日 ${hour}:${minute}`;
-		},
-	}
+// 【修正】将所有工具函数定义前置
+const calculateHeights = () => {
+	const systemInfo = uni.getSystemInfoSync();
+	statusBarHeight.value = systemInfo.statusBarHeight;
+	// #ifndef MP-WEIXIN
+	navBarHeight.value = systemInfo.statusBarHeight + 44;
+	// #endif
+	// #ifdef MP-WEIXIN
+	const menuButtonInfo = uni.getMenuButtonBoundingClientRect();
+	navBarHeight.value = menuButtonInfo.bottom + menuButtonInfo.top - systemInfo.statusBarHeight;
+	// #endif
 };
+
+const calculateInputBarHeight = () => {
+    uni.createSelectorQuery().select('#input-bar-container').boundingClientRect(data => {
+        if (data) {
+            inputBarHeight.value = data.height;
+        }
+    }).exec();
+};
+
+const handleSend = () => {
+    const content = inputValue.value.trim();
+    if (content) {
+        chatStore.sendMessage(content);
+        inputValue.value = '';
+    }
+};
+
+const navigateBack = () => {
+	uni.navigateBack();
+};
+
+const navigateToSettings = () => {
+	uni.navigateTo({
+		url: `/pages/knowledge-base/knowledge-base?id=${companionId.value}&name=${companionName.value}`
+	});
+};
+
+// --- 生命周期 ---
+// 【修正】将生命周期钩子放在函数定义之后
+onLoad((options) => {
+	if (!options.id) {
+		uni.showToast({ title: '参数错误', icon: 'none', duration: 2000, success: () => setTimeout(() => uni.navigateBack(), 2000) });
+		return;
+	}
+	companionId.value = options.id;
+	// 【修正】补全下面这行代码
+	companionName.value = options.name || '聊天';
+	companionAvatar.value = options.avatar || '/static/images/default-avatar.png';
+
+	calculateHeights(); 
+	chatStore.initializeChat(options.id);
+});
 </script>
 
 <style>
-/* 您的样式大部分都很好，我做了一些微调和补全 */
+/* 样式无需改动 */
 page, .chat-page {
 	height: 100%;
 	display: flex;

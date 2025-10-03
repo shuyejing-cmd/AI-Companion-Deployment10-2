@@ -117,7 +117,11 @@
       ],
       "backgroundColor": "#ffffff",
       "selectedIndex": 0,
-      "shown": true
+      "shown": true,
+      "child": [
+        "lauchwebview"
+      ],
+      "selected": 0
     }
   },
   "app-harmony": {

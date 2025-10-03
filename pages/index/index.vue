@@ -4,7 +4,6 @@
 
 		<view class="header-container">
 			<text class="app-title">Sona</text>
-
 			<view class="top-menu-button" @click="toggleMenu">
 				<image class="menu-icon" src="/static/images/add-companion-icon.png"></image>
 			</view>
@@ -47,84 +46,45 @@
 	</view>
 </template>
 
-<script>
-import * as companionApi from '../../api/companion.js';
+<script setup>
+import { ref } from 'vue';
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app';
+import { storeToRefs } from 'pinia';
+import { useCompanionStore } from '@/stores/companionStore.js';
 
-export default {
-	data() {
-		return {
-			companionList: [],
-			isLoading: true,
-			isMenuShow: false,
-			handleCompanionsUpdate: null // 将句柄存储在 data 中
-		};
-	},
-	onLoad() {
-		this.handleCompanionsUpdate = () => {
-			console.log('👂 [index.js] 监听到伙伴列表需要更新，正在刷新...');
-			this.fetchCompanions();
-		};
-	},
-	onShow() {
-        // 在 onShow 中安全地调用 getApp()
-		const app = getApp(); 
-		if (app && app.event && typeof app.event.on === 'function') {
-			app.event.on('companionsUpdated', this.handleCompanionsUpdate);
-		}
-		// 每次页面显示时，都刷新一次列表，确保数据最新
-		this.fetchCompanions();
-	},
-	onHide() {
-        // 在 onHide 中安全地调用 getApp()
-		const app = getApp();
-		if (app && app.event && typeof app.event.off === 'function') {
-			app.event.off('companionsUpdated', this.handleCompanionsUpdate);
-		}
-	},
-	onUnload() {
-        // 在 onUnload 中安全地调用 getApp()
-		const app = getApp();
-		if (app && app.event && typeof app.event.off === 'function') {
-			app.event.off('companionsUpdated', this.handleCompanionsUpdate);
-		}
-	},
-	onPullDownRefresh() {
-		this.fetchCompanions().finally(() => {
-			uni.stopPullDownRefresh();
-		});
-	},
-	methods: {
-		fetchCompanions() {
-			this.isLoading = true;
-			companionApi
-				.getCompanions()
-				.then(res => {
-					this.companionList = res;
-				})
-				.catch(err => {
-					console.error('获取伙伴列表失败', err);
-					uni.showToast({ title: '加载失败，请下拉刷新', icon: 'none' });
-				})
-				.finally(() => {
-					this.isLoading = false;
-				});
-		},
-		toggleMenu() {
-			this.isMenuShow = !this.isMenuShow;
-		},
-		goToAddCompanion() {
-			this.isMenuShow = false;
-			uni.navigateTo({
-                // 请确保这个路径是正确的
-				url: '/pages/companion-form/companion-form'
-			});
-		}
-	}
+// --- 状态管理 ---
+const companionStore = useCompanionStore();
+// [重构] 使用 storeToRefs 来保持 companionList 和 isLoading 的响应性
+const { companionList, isLoading } = storeToRefs(companionStore);
+const isMenuShow = ref(false); // 菜单的显示状态是页面局部状态，保留在页面内
+
+// --- 生命周期钩子 ---
+onShow(() => {
+	// [重构] 每次页面显示时，调用 action 来获取最新数据
+	companionStore.fetchCompanions();
+});
+
+onPullDownRefresh(async () => {
+	// [重构] 下拉刷新时也调用 action
+	await companionStore.fetchCompanions();
+	uni.stopPullDownRefresh();
+});
+
+// --- 方法 ---
+const toggleMenu = () => {
+	isMenuShow.value = !isMenuShow.value;
+};
+
+const goToAddCompanion = () => {
+	isMenuShow.value = false;
+	uni.navigateTo({
+		url: '/pages/companion-form/companion-form'
+	});
 };
 </script>
 
 <style>
-/* 样式基本可以直接复制 */
+/* 样式无需改动 */
 page {
 	height: 100%;
 }

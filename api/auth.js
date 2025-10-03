@@ -1,4 +1,4 @@
-import request from './request'; 
+import request from '@/utils/request.js'; 
 // 我们不再直接从这里调用 uni.request，而是统一使用封装好的 request
 
 // --- 用户注册函数 (无需修改) ---

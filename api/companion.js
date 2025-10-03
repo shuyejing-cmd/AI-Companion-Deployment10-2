@@ -1,4 +1,4 @@
-import request from './request';
+import request from '@/utils/request.js';
 
 export function getCompanions() {
     return request({
