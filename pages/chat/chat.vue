@@ -55,8 +55,8 @@
 </template>
 
 <script setup>
-import { ref , onMounted } from 'vue';
-// 【修正】从 @dcloudio/uni-app 导入所有生命周期钩子
+// 【新增】导入 watch 和 nextTick
+import { ref, watch, nextTick } from 'vue';
 import { onLoad, onUnload } from '@dcloudio/uni-app';
 import { storeToRefs } from 'pinia';
 import { useChatStore } from '@/stores/chatStore.js';
@@ -67,31 +67,35 @@ const companionName = ref('');
 const companionAvatar = ref('');
 const userAvatar = ref('/static/images/user-avatar.png');
 const inputValue = ref('');
+// 【新】scrollTop 作为页面的本地 UI 状态
+const scrollTop = ref(0);
 
 // --- Pinia Store ---
 const chatStore = useChatStore();
-const { messages, isSending, scrollTop } = storeToRefs(chatStore);
+// 【修正】不再从 store 中解构 scrollTop
+const { messages, isSending } = storeToRefs(chatStore);
 
 // --- 动态高度 ---
 const statusBarHeight = ref(0);
 const navBarHeight = ref(0);
-const inputBarHeight = ref(50);
+const inputBarHeight = ref(50); // 默认值
 
-// 【修正】将所有工具函数定义前置
+// --- 方法定义 ---
 const calculateHeights = () => {
 	const systemInfo = uni.getSystemInfoSync();
 	statusBarHeight.value = systemInfo.statusBarHeight;
+	// H5/App 等平台的导航栏高度
 	// #ifndef MP-WEIXIN
 	navBarHeight.value = systemInfo.statusBarHeight + 44;
 	// #endif
+	// 微信小程序的导航栏高度
 	// #ifdef MP-WEIXIN
 	const menuButtonInfo = uni.getMenuButtonBoundingClientRect();
 	navBarHeight.value = menuButtonInfo.bottom + menuButtonInfo.top - systemInfo.statusBarHeight;
 	// #endif
-};
-
-const calculateInputBarHeight = () => {
-    uni.createSelectorQuery().select('#input-bar-container').boundingClientRect(data => {
+	
+	// 动态计算输入框高度，以适配不同设备的底部安全区域
+    uni.createSelectorQuery().in(this).select('#input-bar-container').boundingClientRect(data => {
         if (data) {
             inputBarHeight.value = data.height;
         }
@@ -116,25 +120,48 @@ const navigateToSettings = () => {
 	});
 };
 
-// --- 生命周期 ---
-// 【修正】将生命周期钩子放在函数定义之后
+// 【新】滚动到底部的逻辑，作为页面的一个方法
+const scrollToBottom = () => {
+    // nextTick 确保在 DOM 渲染完成后再执行滚动操作
+    nextTick(() => {
+        // 通过增加一个大数值来确保滚动条能到达底部
+        scrollTop.value += 99999;
+    });
+};
+
+// --- 侦听器 ---
+// 【关键】使用 watch 侦听消息列表的变化, 自动滚动到底部
+watch(messages, (newMessages, oldMessages) => {
+    // 当新消息数组长度大于或等于旧消息数组时（即有新消息加入），执行滚动
+    if (newMessages.length >= oldMessages.length) {
+        scrollToBottom();
+    }
+}, { deep: true }); // deep: true 深度侦听，确保能监听到数组内部元素的变更
+
+
+// --- 生命周期钩子 ---
 onLoad((options) => {
 	if (!options.id) {
 		uni.showToast({ title: '参数错误', icon: 'none', duration: 2000, success: () => setTimeout(() => uni.navigateBack(), 2000) });
 		return;
 	}
 	companionId.value = options.id;
-	// 【修正】补全下面这行代码
 	companionName.value = options.name || '聊天';
 	companionAvatar.value = options.avatar || '/static/images/default-avatar.png';
 
-	calculateHeights(); 
+	calculateHeights();
 	chatStore.initializeChat(options.id);
+});
+
+// 阶段一已添加：确保页面卸载时关闭 WebSocket 连接
+onUnload(() => {
+    console.log('Chat page unloaded, closing WebSocket.');
+    chatStore.closeChat();
 });
 </script>
 
 <style>
-/* 样式无需改动 */
+/* 样式与之前保持一致，无需改动 */
 page, .chat-page {
 	height: 100%;
 	display: flex;
@@ -182,7 +209,6 @@ page, .chat-page {
 .user-message .avatar { margin-left: 20rpx; }
 .user-message .message-content { background-color: #88d46a; color: #fff; }
 
-/* --- 补全的输入框样式 --- */
 .input-bar-container {
 	position: fixed; bottom: 0; left: 0; right: 0; width: 100%;
 	background-color: #f7f7f7; border-top: 1rpx solid #e0e0e0;
@@ -203,7 +229,6 @@ page, .chat-page {
 	color: #b2b2b2;
 }
 .send-button:not([disabled]) { background-color: #07c160; color: #fff; }
-/* --- 样式补全结束 --- */
 
 .cursor { display: inline-block; width: 14rpx; height: 36rpx; background-color: #333; animation: blink 1s infinite; vertical-align: text-bottom; margin-left: 5rpx; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }

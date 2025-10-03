@@ -1,11 +1,11 @@
 // stores/chatStore.js
 import { defineStore } from 'pinia';
-import { ref, nextTick } from 'vue';
+import { ref } from 'vue';
 import { useUserStore } from '@/stores/user.js';
 import * as chatApi from '@/api/chat.js';
 
-// 【重要】请将这里替换为你的后端部署地址，注意协议是 ws
-const WS_BASE_URL = 'ws://120.53.230.215:8000'; 
+// 从环境变量读取 WebSocket URL
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL; 
 
 export const useChatStore = defineStore('chat', () => {
     // === State ===
@@ -13,7 +13,7 @@ export const useChatStore = defineStore('chat', () => {
     const companionId = ref(null);
     const socketTask = ref(null);
     const isSending = ref(false);
-    const scrollTop = ref(99999); // 用于控制滚动
+    // [Removed] scrollTop state is no longer managed here
 
     // === Actions ===
 
@@ -32,6 +32,7 @@ export const useChatStore = defineStore('chat', () => {
 
         companionId.value = id;
         
+        // 注意：这里不再需要手动滚动，页面会通过 watch 自动处理
         await loadHistoryMessages();
         connectWebSocket();
     };
@@ -50,7 +51,7 @@ export const useChatStore = defineStore('chat', () => {
             uni.showToast({ title: '加载历史失败', icon: 'none' });
         } finally {
             uni.hideLoading();
-            scrollToBottom();
+            // [Removed] No longer calls scrollToBottom()
         }
     };
 
@@ -77,7 +78,6 @@ export const useChatStore = defineStore('chat', () => {
             }
         });
         
-        // 绑定事件
         socketTask.value.onOpen(() => console.log("WebSocket 连接成功"));
         socketTask.value.onClose(() => console.log("WebSocket 连接关闭"));
         socketTask.value.onError((err) => {
@@ -113,9 +113,10 @@ export const useChatStore = defineStore('chat', () => {
             lastMsg.content += receivedText;
         } else {
             const newAiMessage = { role: 'ai', content: receivedText, done: false, created_at: new Date().toISOString() };
+            // 使用 processMessages 来确保一致的数据结构
             messages.value = processMessages([newAiMessage], messages.value);
         }
-        scrollToBottom();
+        // [Removed] No longer calls scrollToBottom()
     };
     
     /**
@@ -130,7 +131,7 @@ export const useChatStore = defineStore('chat', () => {
         
         socketTask.value.send({ data: content });
         isSending.value = true;
-        scrollToBottom();
+        // [Removed] No longer calls scrollToBottom()
     };
 
     /**
@@ -142,17 +143,8 @@ export const useChatStore = defineStore('chat', () => {
             socketTask.value = null;
         }
     };
-
-    /**
-     * 滚动到底部
-     */
-    const scrollToBottom = () => {
-        nextTick(() => {
-            scrollTop.value += 10000; // 一个足够大的增量
-        });
-    };
     
-    // --- 工具函数 (保持私有，不暴露给组件) ---
+    // --- 工具函数 (保持私有) ---
     const processMessages = (newMessages, existingMessages = []) => {
         let lastTimestamp = existingMessages.length > 0 ? new Date(existingMessages[existingMessages.length - 1].created_at).getTime() : 0;
         const tenMinutes = 10 * 60 * 1000;
@@ -173,11 +165,9 @@ export const useChatStore = defineStore('chat', () => {
         return `${date.getMonth() + 1}月${date.getDate()}日 ${('0' + date.getHours()).slice(-2)}:${('0' + date.getMinutes()).slice(-2)}`;
     };
 
-
     return {
         messages,
         isSending,
-        scrollTop,
         initializeChat,
         sendMessage,
         closeChat,

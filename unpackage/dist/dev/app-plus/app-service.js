@@ -1704,13 +1704,14 @@ This will fail in production if not fixed.`);
   }
   const useUserStore = defineStore("user", {
     state: () => ({
-      token: uni.getStorageSync("token") || null,
-      userInfo: JSON.parse(uni.getStorageSync("userInfo") || "{}")
+      token: uni.getStorageSync("token") || null
+      // userInfo 已被移除，保持代码整洁
     }),
     getters: {
       isLoggedIn: (state) => !!state.token
     },
     actions: {
+      // ▼▼▼【核心重构代码】▼▼▼
       async login(loginData) {
         var _a;
         try {
@@ -1721,17 +1722,15 @@ This will fail in production if not fixed.`);
           }
           this.token = accessToken;
           uni.setStorageSync("token", accessToken);
-          uni.showToast({ title: "登录成功", icon: "success" });
-          uni.switchTab({
-            url: "/pages/index/index"
-          });
+          return true;
         } catch (error) {
           formatAppLog("error", "at stores/user.js:36", "Login failed:", error);
           const errorMsg = ((_a = error.data) == null ? void 0 : _a.detail) || "登录失败，请检查凭据";
           uni.showToast({ title: errorMsg, icon: "none" });
-          throw error;
+          return false;
         }
       },
+      // ▲▲▲【核心重构代码】▲▲▲
       async register(registerData) {
         var _a;
         try {
@@ -1747,30 +1746,15 @@ This will fail in production if not fixed.`);
             });
           }, 2e3);
         } catch (error) {
-          formatAppLog("error", "at stores/user.js:56", "Registration failed:", error);
+          formatAppLog("error", "at stores/user.js:62", "Registration failed:", error);
           const errorMsg = ((_a = error.data) == null ? void 0 : _a.detail) || "注册失败，请稍后再试";
           uni.showToast({ title: errorMsg, icon: "none" });
           throw error;
         }
       },
-      // 【修正】彻底移除 fetchUserInfo 这个 action
-      /*
-      async fetchUserInfo() {
-          try {
-              const userInfo = await getUserInfoRequest();
-              this.userInfo = userInfo;
-              uni.setStorageSync('userInfo', JSON.stringify(userInfo));
-          } catch (error) {
-              __f__('error','at stores/user.js:71','Fetch user info failed:', error);
-              this.logout();
-          }
-      },
-      */
       logout() {
         this.token = null;
-        this.userInfo = {};
         uni.removeStorageSync("token");
-        uni.removeStorageSync("userInfo");
         uni.showToast({ title: "已退出登录", icon: "none" });
         uni.reLaunch({
           url: "/pages/login/login"
@@ -1779,19 +1763,20 @@ This will fail in production if not fixed.`);
     }
   });
   const BASE_URL = "http://120.53.230.215:8000";
+  formatAppLog("log", "at utils/request.js:6", `[Request] Current API Base URL: ${BASE_URL}`);
   const request = (options) => {
     return new Promise((resolve, reject) => {
       let userStore;
       try {
         userStore = useUserStore();
       } catch (error) {
-        formatAppLog("error", "at utils/request.js:14", "在请求拦截器中获取 Pinia store 失败:", error);
+        formatAppLog("error", "at utils/request.js:15", "在请求拦截器中获取 Pinia store 失败:", error);
       }
       if (userStore && userStore.token) {
         if (!options.header)
           options.header = {};
         options.header.Authorization = `Bearer ${userStore.token}`;
-        formatAppLog("log", "at utils/request.js:22", "请求已携带Token:", options.header.Authorization);
+        formatAppLog("log", "at utils/request.js:23", "请求已携带Token:", options.header.Authorization);
       }
       uni.request({
         url: BASE_URL + options.url,
@@ -1802,7 +1787,7 @@ This will fail in production if not fixed.`);
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve(res.data);
           } else if (res.statusCode === 401) {
-            formatAppLog("error", "at utils/request.js:35", "响应拦截器：收到401，认证失败");
+            formatAppLog("error", "at utils/request.js:36", "响应拦截器：收到401，认证失败");
             if (userStore) {
               userStore.logout();
             } else {
@@ -1810,13 +1795,13 @@ This will fail in production if not fixed.`);
             }
             reject(res.data);
           } else {
-            formatAppLog("error", "at utils/request.js:44", `响应拦截器：请求失败，状态码 ${res.statusCode}`);
+            formatAppLog("error", "at utils/request.js:45", `响应拦截器：请求失败，状态码 ${res.statusCode}`);
             reject(res.data);
           }
         },
         fail: (err) => {
           uni.showToast({ title: "网络请求异常", icon: "none" });
-          formatAppLog("error", "at utils/request.js:50", "网络请求失败:", err);
+          formatAppLog("error", "at utils/request.js:51", "网络请求失败:", err);
           reject(err);
         }
       });
@@ -2077,7 +2062,6 @@ This will fail in production if not fixed.`);
     const companionId = vue.ref(null);
     const socketTask = vue.ref(null);
     const isSending = vue.ref(false);
-    const scrollTop = vue.ref(99999);
     const initializeChat = async (id) => {
       messages.value = [];
       isSending.value = false;
@@ -2097,11 +2081,10 @@ This will fail in production if not fixed.`);
         const history = await getMessages(companionId.value);
         messages.value = processMessages(history);
       } catch (err) {
-        formatAppLog("error", "at stores/chatStore.js:49", "加载历史消息失败", err);
+        formatAppLog("error", "at stores/chatStore.js:50", "加载历史消息失败", err);
         uni.showToast({ title: "加载历史失败", icon: "none" });
       } finally {
         uni.hideLoading();
-        scrollToBottom();
       }
     };
     const connectWebSocket = () => {
@@ -2117,7 +2100,7 @@ This will fail in production if not fixed.`);
         success: () => {
         },
         fail: (err) => {
-          formatAppLog("error", "at stores/chatStore.js:75", "WebSocket 连接失败", err);
+          formatAppLog("error", "at stores/chatStore.js:76", "WebSocket 连接失败", err);
           uni.showToast({ title: "连接聊天服务器失败", icon: "none" });
         }
       });
@@ -2152,7 +2135,6 @@ This will fail in production if not fixed.`);
         const newAiMessage = { role: "ai", content: receivedText, done: false, created_at: (/* @__PURE__ */ new Date()).toISOString() };
         messages.value = processMessages([newAiMessage], messages.value);
       }
-      scrollToBottom();
     };
     const sendMessage = (content) => {
       if (!content || isSending.value || !socketTask.value)
@@ -2161,18 +2143,12 @@ This will fail in production if not fixed.`);
       messages.value = processMessages([userMessage], messages.value);
       socketTask.value.send({ data: content });
       isSending.value = true;
-      scrollToBottom();
     };
     const closeChat = () => {
       if (socketTask.value) {
         socketTask.value.close();
         socketTask.value = null;
       }
-    };
-    const scrollToBottom = () => {
-      vue.nextTick(() => {
-        scrollTop.value += 1e4;
-      });
     };
     const processMessages = (newMessages, existingMessages = []) => {
       let lastTimestamp = existingMessages.length > 0 ? new Date(existingMessages[existingMessages.length - 1].created_at).getTime() : 0;
@@ -2195,7 +2171,6 @@ This will fail in production if not fixed.`);
     return {
       messages,
       isSending,
-      scrollTop,
       initializeChat,
       sendMessage,
       closeChat
@@ -2212,8 +2187,9 @@ This will fail in production if not fixed.`);
       const companionAvatar = vue.ref("");
       const userAvatar = vue.ref("/static/images/user-avatar.png");
       const inputValue = vue.ref("");
+      const scrollTop = vue.ref(0);
       const chatStore = useChatStore();
-      const { messages, isSending, scrollTop } = storeToRefs(chatStore);
+      const { messages, isSending } = storeToRefs(chatStore);
       const statusBarHeight = vue.ref(0);
       const navBarHeight = vue.ref(0);
       const inputBarHeight = vue.ref(50);
@@ -2221,9 +2197,7 @@ This will fail in production if not fixed.`);
         const systemInfo = uni.getSystemInfoSync();
         statusBarHeight.value = systemInfo.statusBarHeight;
         navBarHeight.value = systemInfo.statusBarHeight + 44;
-      };
-      const calculateInputBarHeight = () => {
-        uni.createSelectorQuery().select("#input-bar-container").boundingClientRect((data) => {
+        uni.createSelectorQuery().in(this).select("#input-bar-container").boundingClientRect((data) => {
           if (data) {
             inputBarHeight.value = data.height;
           }
@@ -2244,6 +2218,16 @@ This will fail in production if not fixed.`);
           url: `/pages/knowledge-base/knowledge-base?id=${companionId.value}&name=${companionName.value}`
         });
       };
+      const scrollToBottom = () => {
+        vue.nextTick(() => {
+          scrollTop.value += 99999;
+        });
+      };
+      vue.watch(messages, (newMessages, oldMessages) => {
+        if (newMessages.length >= oldMessages.length) {
+          scrollToBottom();
+        }
+      }, { deep: true });
       onLoad((options) => {
         if (!options.id) {
           uni.showToast({ title: "参数错误", icon: "none", duration: 2e3, success: () => setTimeout(() => uni.navigateBack(), 2e3) });
@@ -2255,7 +2239,11 @@ This will fail in production if not fixed.`);
         calculateHeights();
         chatStore.initializeChat(options.id);
       });
-      const __returned__ = { companionId, companionName, companionAvatar, userAvatar, inputValue, chatStore, messages, isSending, scrollTop, statusBarHeight, navBarHeight, inputBarHeight, calculateHeights, calculateInputBarHeight, handleSend, navigateBack, navigateToSettings, ref: vue.ref, onMounted: vue.onMounted, get onLoad() {
+      onUnload(() => {
+        formatAppLog("log", "at pages/chat/chat.vue:158", "Chat page unloaded, closing WebSocket.");
+        chatStore.closeChat();
+      });
+      const __returned__ = { companionId, companionName, companionAvatar, userAvatar, inputValue, scrollTop, chatStore, messages, isSending, statusBarHeight, navBarHeight, inputBarHeight, calculateHeights, handleSend, navigateBack, navigateToSettings, scrollToBottom, ref: vue.ref, watch: vue.watch, nextTick: vue.nextTick, get onLoad() {
         return onLoad;
       }, get onUnload() {
         return onUnload;
@@ -2412,20 +2400,32 @@ This will fail in production if not fixed.`);
     setup(__props, { expose: __expose }) {
       __expose();
       const userStore = useUserStore();
-      const loginForm = vue.reactive({
-        // [已修改] 将 username 属性改为 email
-        email: "",
-        password: ""
-      });
+      const email = vue.ref("");
+      const password = vue.ref("");
+      const isLoading = vue.ref(false);
       const handleLogin = async () => {
-        if (!loginForm.email || !loginForm.password) {
-          uni.showToast({ title: "请输入邮箱和密码", icon: "none" });
+        if (isLoading.value)
           return;
-        }
+        isLoading.value = true;
+        uni.showLoading({ title: "登录中..." });
         try {
-          await userStore.login(loginForm);
-        } catch (error) {
-          formatAppLog("log", "at pages/login/login.vue:45", "Login page caught an error.");
+          const loginSuccess = await userStore.login({
+            email: email.value,
+            password: password.value
+          });
+          if (loginSuccess) {
+            uni.hideLoading();
+            uni.showToast({ title: "登录成功", icon: "success" });
+            setTimeout(() => {
+              uni.switchTab({
+                url: "/pages/index/index"
+              });
+            }, 800);
+          } else {
+            uni.hideLoading();
+          }
+        } finally {
+          isLoading.value = false;
         }
       };
       const goToRegister = () => {
@@ -2433,7 +2433,7 @@ This will fail in production if not fixed.`);
           url: "/pages/register/register"
         });
       };
-      const __returned__ = { userStore, loginForm, handleLogin, goToRegister, reactive: vue.reactive, get useUserStore() {
+      const __returned__ = { userStore, email, password, isLoading, handleLogin, goToRegister, ref: vue.ref, get useUserStore() {
         return useUserStore;
       } };
       Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
@@ -2449,28 +2449,28 @@ This will fail in production if not fixed.`);
           {
             class: "input-item",
             type: "text",
-            "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => $setup.loginForm.email = $event),
+            "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => _ctx.loginForm.email = $event),
             placeholder: "请输入邮箱"
           },
           null,
           512
           /* NEED_PATCH */
         ), [
-          [vue.vModelText, $setup.loginForm.email]
+          [vue.vModelText, _ctx.loginForm.email]
         ]),
         vue.withDirectives(vue.createElementVNode(
           "input",
           {
             class: "input-item",
             type: "password",
-            "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => $setup.loginForm.password = $event),
+            "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => _ctx.loginForm.password = $event),
             placeholder: "请输入密码"
           },
           null,
           512
           /* NEED_PATCH */
         ), [
-          [vue.vModelText, $setup.loginForm.password]
+          [vue.vModelText, _ctx.loginForm.password]
         ]),
         vue.createElementVNode("button", {
           class: "action-btn",

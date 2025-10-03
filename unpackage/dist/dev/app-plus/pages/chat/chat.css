@@ -1,5 +1,5 @@
 
-/* 样式无需改动 */
+/* 样式与之前保持一致，无需改动 */
 body, .chat-page {
 	height: 100%;
 	display: flex;
@@ -60,8 +60,6 @@ body, .chat-page {
 }
 .user-message .message-content { background-color: #88d46a; color: #fff;
 }
-
-/* --- 补全的输入框样式 --- */
 .input-bar-container {
 	position: fixed; bottom: 0; left: 0; right: 0; width: 100%;
 	background-color: #f7f7f7; border-top: 0.03125rem solid #e0e0e0;
@@ -83,7 +81,6 @@ body, .chat-page {
 }
 .send-button:not([disabled]) { background-color: #07c160; color: #fff;
 }
-/* --- 样式补全结束 --- */
 .cursor { display: inline-block; width: 0.4375rem; height: 1.125rem; background-color: #333; animation: blink 1s infinite; vertical-align: text-bottom; margin-left: 0.15625rem;
 }
 @keyframes blink {

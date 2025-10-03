@@ -2,7 +2,8 @@
 import { useUserStore } from '@/stores/user.js';
 
 // 【重要】请将这里替换为你的后端部署地址
-const BASE_URL = 'http://120.53.230.215:8000'; 
+const BASE_URL = import.meta.env.VITE_BASE_URL; 
+console.log(`[Request] Current API Base URL: ${BASE_URL}`); // 添加日志，方便调试
 
 const request = (options) => {
     return new Promise((resolve, reject) => {

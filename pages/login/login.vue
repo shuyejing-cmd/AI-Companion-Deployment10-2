@@ -14,43 +14,60 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { ref } from 'vue';
 import { useUserStore } from '@/stores/user.js';
 
-// 1. 获取 user store 实例
 const userStore = useUserStore();
 
-// 2. 创建一个响应式对象来绑定表单数据
-const loginForm = reactive({
-    // [已修改] 将 username 属性改为 email
-    email: '',
-    password: ''
-});
+// 页面本地状态，用于UI展示
+const email = ref('');
+const password = ref('');
+const isLoading = ref(false); // 用于防止用户重复点击
 
-// 3. 定义登录处理函数
+// ▼▼▼【核心重构代码】▼▼▼
 const handleLogin = async () => {
-    // [已修改] 检查 email 字段，并更新提示信息
-    if (!loginForm.email || !loginForm.password) {
-        uni.showToast({ title: '请输入邮箱和密码', icon: 'none' });
-        return;
-    }
+    // 1. 防抖处理
+    if (isLoading.value) return;
+
+    // 2. 控制UI进入加载状态
+    isLoading.value = true;
+    uni.showLoading({ title: '登录中...' });
+
     try {
-        // 4. 调用 store 的 action，把所有复杂逻辑都交给他
-        // 注意：请确保你的 userStore.login action 能处理包含 email 的对象
-        await userStore.login(loginForm);
-        // 登录成功后的跳转逻辑已在 store action 中处理
-    } catch (error) {
-        // 登录失败的提示已在 store action 中处理
-        // 这里可以根据需要做一些额外的UI处理，比如按钮禁用状态等
-        console.log('Login page caught an error.');
+        // 3.【关键】调用 Store 的 login 方法，并等待其结果
+        const loginSuccess = await userStore.login({
+            email: email.value,
+            password: password.value
+        });
+    
+        // 4. 根据 Store 返回的结果，在页面上做出决策
+        if (loginSuccess) {
+            uni.hideLoading(); // 先隐藏加载提示
+            uni.showToast({ title: '登录成功', icon: 'success' });
+            
+            // 延迟一点再跳转，给用户看清提示的时间
+            setTimeout(() => {
+                uni.switchTab({
+                    url: '/pages/index/index'
+                });
+            }, 800);
+
+        } else {
+            // 如果失败，store 内部已经弹了 Toast 提示
+            // 页面只需恢复UI状态即可
+            uni.hideLoading();
+        }
+    } finally {
+        // 5. 无论成功失败，最后都要恢复按钮的可点击状态
+        isLoading.value = false;
     }
 };
+// ▲▲▲【核心重构代码】▲▲▲
 
-// 【新增】确保跳转到注册页的函数存在
 const goToRegister = () => {
-    uni.navigateTo({
-        url: '/pages/register/register'
-    });
+	uni.navigateTo({
+		url: '/pages/register/register'
+	});
 };
 </script>
 
