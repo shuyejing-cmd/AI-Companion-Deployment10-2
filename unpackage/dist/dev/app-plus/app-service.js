@@ -1795,13 +1795,13 @@ This will fail in production if not fixed.`);
             }
             reject(res.data);
           } else {
-            formatAppLog("error", "at utils/request.js:45", `响应拦截器：请求失败，状态码 ${res.statusCode}`);
+            formatAppLog("error", "at utils/request.js:46", `响应拦截器：请求失败，状态码 ${res.statusCode}`);
             reject(res.data);
           }
         },
         fail: (err) => {
           uni.showToast({ title: "网络请求异常", icon: "none" });
-          formatAppLog("error", "at utils/request.js:51", "网络请求失败:", err);
+          formatAppLog("error", "at utils/request.js:52", "网络请求失败:", err);
           reject(err);
         }
       });
@@ -1839,6 +1839,14 @@ This will fail in production if not fixed.`);
       method: "delete"
     });
   }
+  const companionApi = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    createCompanion,
+    deleteCompanion,
+    getCompanionById,
+    getCompanions,
+    updateCompanion
+  }, Symbol.toStringTag, { value: "Module" }));
   const useCompanionStore = defineStore("companion", () => {
     const companionList = vue.ref([]);
     const isLoading = vue.ref(true);
@@ -1908,7 +1916,7 @@ This will fail in production if not fixed.`);
       // <-- 【新增】在这里导出新函数
     };
   });
-  const _imports_0$2 = "/static/images/add-companion-icon.png";
+  const _imports_0$2 = "/static/add-companion-icon.png";
   const _export_sfc = (sfc, props) => {
     const target = sfc.__vccOpts || sfc;
     for (const [key, val] of props) {
@@ -1923,6 +1931,7 @@ This will fail in production if not fixed.`);
       const companionStore = useCompanionStore();
       const { companionList, isLoading } = storeToRefs(companionStore);
       const isMenuShow = vue.ref(false);
+      const isNavigating = vue.ref(false);
       onShow(() => {
         companionStore.fetchCompanions();
       });
@@ -1939,7 +1948,24 @@ This will fail in production if not fixed.`);
           url: "/pages/companion-form/companion-form"
         });
       };
-      const __returned__ = { companionStore, companionList, isLoading, isMenuShow, toggleMenu, goToAddCompanion, ref: vue.ref, get onShow() {
+      const goToChat = (item) => {
+        if (isNavigating.value) {
+          formatAppLog("warn", "at pages/index/index.vue:96", "导航被锁定，阻止重复跳转。");
+          return;
+        }
+        isNavigating.value = true;
+        const url = `/pages/chat/chat?id=${item.id}&name=${item.name}&avatar=${item.src || "/static/default-avatar.png"}`;
+        uni.navigateTo({
+          url,
+          // 5. 导航完成后，无论成功或失败，都在延迟后解除锁定
+          complete: () => {
+            setTimeout(() => {
+              isNavigating.value = false;
+            }, 300);
+          }
+        });
+      };
+      const __returned__ = { companionStore, companionList, isLoading, isMenuShow, isNavigating, toggleMenu, goToAddCompanion, goToChat, ref: vue.ref, get onShow() {
         return onShow;
       }, get onPullDownRefresh() {
         return onPullDownRefresh;
@@ -1956,15 +1982,19 @@ This will fail in production if not fixed.`);
     return vue.openBlock(), vue.createElementBlock("view", null, [
       vue.createElementVNode("view", { class: "global-bg" }),
       vue.createElementVNode("view", { class: "header-container" }, [
-        vue.createElementVNode("text", { class: "app-title" }, "Sona"),
-        vue.createElementVNode("view", {
-          class: "top-menu-button",
-          onClick: $setup.toggleMenu
-        }, [
-          vue.createElementVNode("image", {
-            class: "menu-icon",
-            src: _imports_0$2
-          })
+        vue.createElementVNode("view", { class: "header-content" }, [
+          vue.createElementVNode("view", { class: "placeholder-left" }),
+          vue.createTextVNode(),
+          vue.createElementVNode("text", { class: "app-title" }, "Sona"),
+          vue.createElementVNode("view", {
+            class: "top-menu-button",
+            onClick: $setup.toggleMenu
+          }, [
+            vue.createElementVNode("image", {
+              class: "menu-icon",
+              src: _imports_0$2
+            })
+          ])
         ])
       ]),
       vue.createElementVNode(
@@ -2006,16 +2036,16 @@ This will fail in production if not fixed.`);
             vue.Fragment,
             null,
             vue.renderList($setup.companionList, (item) => {
-              return vue.openBlock(), vue.createElementBlock("navigator", {
+              return vue.openBlock(), vue.createElementBlock("view", {
                 key: item.id,
                 class: "contact-item",
-                url: "/pages/chat/chat?id=" + item.id + "&name=" + item.name + "&avatar=" + (item.src || "/static/images/default-avatar.png"),
+                onClick: ($event) => $setup.goToChat(item),
                 "hover-class": "none"
               }, [
                 vue.createElementVNode("image", {
                   class: "avatar",
                   mode: "aspectFill",
-                  src: item.src || "/static/images/default-avatar.png"
+                  src: item.src || "/static/default-avatar.png"
                 }, null, 8, ["src"]),
                 vue.createElementVNode("view", { class: "info" }, [
                   vue.createElementVNode(
@@ -2033,7 +2063,7 @@ This will fail in production if not fixed.`);
                     /* TEXT */
                   )
                 ])
-              ], 8, ["url"]);
+              ], 8, ["onClick"]);
             }),
             128
             /* KEYED_FRAGMENT */
@@ -2176,8 +2206,8 @@ This will fail in production if not fixed.`);
       closeChat
     };
   });
-  const _imports_0$1 = "/static/images/back-arrow-icon.png";
-  const _imports_0 = "/static/images/right-arrow-icon.png";
+  const _imports_0$1 = "/static/back-arrow-icon.png";
+  const _imports_0 = "/static/right-arrow-icon.png";
   const _sfc_main$8 = {
     __name: "chat",
     setup(__props, { expose: __expose }) {
@@ -2193,12 +2223,13 @@ This will fail in production if not fixed.`);
       const statusBarHeight = vue.ref(0);
       const navBarHeight = vue.ref(0);
       const inputBarHeight = vue.ref(50);
+      const keyboardHeight = vue.ref(0);
       const calculateHeights = () => {
         const systemInfo = uni.getSystemInfoSync();
         statusBarHeight.value = systemInfo.statusBarHeight;
         navBarHeight.value = systemInfo.statusBarHeight + 44;
-        uni.createSelectorQuery().in(this).select("#input-bar-container").boundingClientRect((data) => {
-          if (data) {
+        uni.createSelectorQuery().select("#input-bar-container").boundingClientRect((data) => {
+          if (data && data.height) {
             inputBarHeight.value = data.height;
           }
         }).exec();
@@ -2218,13 +2249,25 @@ This will fail in production if not fixed.`);
           url: `/pages/knowledge-base/knowledge-base?id=${companionId.value}&name=${companionName.value}`
         });
       };
+      const handleFocus = (e) => {
+        if (e.detail && e.detail.height) {
+          keyboardHeight.value = e.detail.height;
+          scrollToBottom();
+        }
+      };
+      const handleBlur = () => {
+        keyboardHeight.value = 0;
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+      };
       const scrollToBottom = () => {
         vue.nextTick(() => {
           scrollTop.value += 99999;
         });
       };
       vue.watch(messages, (newMessages, oldMessages) => {
-        if (newMessages.length >= oldMessages.length) {
+        if (newMessages.length > oldMessages.length) {
           scrollToBottom();
         }
       }, { deep: true });
@@ -2240,10 +2283,10 @@ This will fail in production if not fixed.`);
         chatStore.initializeChat(options.id);
       });
       onUnload(() => {
-        formatAppLog("log", "at pages/chat/chat.vue:158", "Chat page unloaded, closing WebSocket.");
+        formatAppLog("log", "at pages/chat/chat.vue:195", "Chat page unloaded, closing WebSocket.");
         chatStore.closeChat();
       });
-      const __returned__ = { companionId, companionName, companionAvatar, userAvatar, inputValue, scrollTop, chatStore, messages, isSending, statusBarHeight, navBarHeight, inputBarHeight, calculateHeights, handleSend, navigateBack, navigateToSettings, scrollToBottom, ref: vue.ref, watch: vue.watch, nextTick: vue.nextTick, get onLoad() {
+      const __returned__ = { companionId, companionName, companionAvatar, userAvatar, inputValue, scrollTop, chatStore, messages, isSending, statusBarHeight, navBarHeight, inputBarHeight, keyboardHeight, calculateHeights, handleSend, navigateBack, navigateToSettings, handleFocus, handleBlur, scrollToBottom, ref: vue.ref, watch: vue.watch, nextTick: vue.nextTick, getCurrentInstance: vue.getCurrentInstance, get onLoad() {
         return onLoad;
       }, get onUnload() {
         return onUnload;
@@ -2299,7 +2342,10 @@ This will fail in production if not fixed.`);
       vue.createElementVNode("view", { class: "global-bg" }),
       vue.createElementVNode("scroll-view", {
         class: "chat-container",
-        style: vue.normalizeStyle({ paddingTop: $setup.navBarHeight + "px", paddingBottom: $setup.inputBarHeight + "px" }),
+        style: vue.normalizeStyle({
+          paddingTop: $setup.navBarHeight + "px",
+          paddingBottom: $setup.inputBarHeight + $setup.keyboardHeight + "px"
+        }),
         "scroll-y": true,
         "scroll-top": $setup.scrollTop,
         "scroll-with-animation": true
@@ -2381,7 +2427,9 @@ This will fail in production if not fixed.`);
             onConfirm: $setup.handleSend,
             disabled: $setup.isSending,
             "adjust-position": false,
-            "cursor-spacing": "20"
+            "cursor-spacing": "20",
+            onFocus: $setup.handleFocus,
+            onBlur: $setup.handleBlur
           }, null, 40, ["disabled"]), [
             [vue.vModelText, $setup.inputValue]
           ]),
@@ -2396,94 +2444,210 @@ This will fail in production if not fixed.`);
   }
   const PagesChatChat = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["render", _sfc_render$7], ["__file", "D:/HBuilderX/项目/ai情感陪伴/pages/chat/chat.vue"]]);
   const _sfc_main$7 = {
-    __name: "login",
-    setup(__props, { expose: __expose }) {
-      __expose();
-      const userStore = useUserStore();
-      const email = vue.ref("");
-      const password = vue.ref("");
-      const isLoading = vue.ref(false);
-      const handleLogin = async () => {
-        if (isLoading.value)
-          return;
-        isLoading.value = true;
-        uni.showLoading({ title: "登录中..." });
+    data() {
+      return {
+        form: {
+          id: null,
+          name: "",
+          description: "一个新建的AI伙伴",
+          instructions: "",
+          seed: "",
+          src: "",
+          gender: "NONE"
+        },
+        mode: "create",
+        isSubmitting: false,
+        statusBarHeight: 0
+      };
+    },
+    onLoad(options) {
+      const systemInfo = uni.getSystemInfoSync();
+      this.statusBarHeight = systemInfo.statusBarHeight || 0;
+      if (options.mode === "edit" && options.id) {
+        this.mode = "edit";
+        this.form.id = options.id;
+        uni.setNavigationBarTitle({ title: "编辑伙伴" });
+        this.loadCompanionData(options.id);
+      } else {
+        this.mode = "create";
+        this.form = { id: null, name: "", description: "一个新建的AI伙伴", instructions: "", seed: "", src: "", gender: "NONE" };
+        uni.setNavigationBarTitle({ title: "创建新的AI伙伴" });
+      }
+    },
+    methods: {
+      async loadCompanionData(companionId) {
+        uni.showLoading({ title: "加载数据..." });
         try {
-          const loginSuccess = await userStore.login({
-            email: email.value,
-            password: password.value
-          });
-          if (loginSuccess) {
-            uni.hideLoading();
-            uni.showToast({ title: "登录成功", icon: "success" });
-            setTimeout(() => {
-              uni.switchTab({
-                url: "/pages/index/index"
-              });
-            }, 800);
-          } else {
-            uni.hideLoading();
-          }
+          const companionData = await getCompanionById(companionId);
+          this.form = companionData;
+        } catch (err) {
+          uni.showToast({ title: "加载失败", icon: "none" });
         } finally {
-          isLoading.value = false;
+          uni.hideLoading();
         }
-      };
-      const goToRegister = () => {
-        uni.navigateTo({
-          url: "/pages/register/register"
+      },
+      handleInput(e, field) {
+        this.form[field] = e.detail.value;
+      },
+      chooseAvatar() {
+        uni.chooseImage({
+          count: 1,
+          sizeType: ["compressed"],
+          sourceType: ["album", "camera"],
+          success: (res) => {
+            const tempFilePath = res.tempFilePaths[0];
+            this.form.src = tempFilePath;
+            uni.showToast({ title: "头像上传成功(演示)", icon: "none" });
+          }
         });
-      };
-      const __returned__ = { userStore, email, password, isLoading, handleLogin, goToRegister, ref: vue.ref, get useUserStore() {
-        return useUserStore;
-      } };
-      Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
-      return __returned__;
+      },
+      onGenderChange(e) {
+        this.form.gender = e.detail.value;
+      },
+      async handleSubmit() {
+        const app = getApp();
+        if (this.isSubmitting)
+          return;
+        if (!this.form.name || !this.form.instructions) {
+          uni.showToast({ title: "昵称和角色设定不能为空", icon: "none" });
+          return;
+        }
+        const dataToSubmit = {
+          name: this.form.name,
+          description: this.form.description,
+          instructions: this.form.instructions,
+          seed: this.form.seed || `我是${this.form.name}，很高兴认识你！`,
+          src: this.form.src
+        };
+        this.isSubmitting = true;
+        uni.showLoading({ title: "正在保存..." });
+        try {
+          if (this.mode === "edit") {
+            await updateCompanion(this.form.id, dataToSubmit);
+          } else {
+            await createCompanion(dataToSubmit);
+          }
+          uni.showToast({ title: "保存成功！", icon: "success" });
+          if (app && app.event && typeof app.event.emit === "function") {
+            app.event.emit("companionsUpdated");
+          }
+          setTimeout(() => {
+            uni.navigateBack();
+          }, 1500);
+        } catch (err) {
+          formatAppLog("error", "at pages/login/login.vue:170", "保存伙伴失败", err);
+          uni.showToast({ title: "保存失败", icon: "none" });
+        } finally {
+          uni.hideLoading();
+          this.isSubmitting = false;
+        }
+      }
     }
   };
   function _sfc_render$6(_ctx, _cache, $props, $setup, $data, $options) {
-    return vue.openBlock(), vue.createElementBlock("view", { class: "container" }, [
-      vue.createElementVNode("view", { class: "form-wrapper" }, [
-        vue.createElementVNode("view", { class: "title" }, "欢迎回来"),
-        vue.withDirectives(vue.createElementVNode(
-          "input",
-          {
-            class: "input-item",
-            type: "text",
-            "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => _ctx.loginForm.email = $event),
-            placeholder: "请输入邮箱"
-          },
-          null,
-          512
-          /* NEED_PATCH */
-        ), [
-          [vue.vModelText, _ctx.loginForm.email]
-        ]),
-        vue.withDirectives(vue.createElementVNode(
-          "input",
-          {
-            class: "input-item",
-            type: "password",
-            "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => _ctx.loginForm.password = $event),
-            placeholder: "请输入密码"
-          },
-          null,
-          512
-          /* NEED_PATCH */
-        ), [
-          [vue.vModelText, _ctx.loginForm.password]
-        ]),
-        vue.createElementVNode("button", {
-          class: "action-btn",
-          onClick: $setup.handleLogin
-        }, "登录"),
-        vue.createElementVNode("view", {
-          class: "link",
-          onClick: $setup.goToRegister
-        }, "还没有账户？立即注册")
-      ])
+    return vue.openBlock(), vue.createElementBlock("view", null, [
+      vue.createElementVNode("view", { class: "global-bg" }),
+      vue.createTextVNode(),
+      vue.createElementVNode(
+        "view",
+        {
+          class: "form-container",
+          style: vue.normalizeStyle({ paddingTop: $data.statusBarHeight + 15 + "px" })
+        },
+        [
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.createElementVNode("text", { class: "form-label" }, "伙伴头像"),
+            vue.createElementVNode("image", {
+              class: "avatar-uploader",
+              src: $data.form.src || "/static/default-avatar.png",
+              onClick: _cache[0] || (_cache[0] = (...args) => $options.chooseAvatar && $options.chooseAvatar(...args)),
+              mode: "aspectFill"
+            }, null, 8, ["src"])
+          ]),
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.createElementVNode("text", { class: "form-label" }, "伙伴昵称"),
+            vue.createElementVNode("input", {
+              class: "form-input",
+              placeholder: "给你的伙伴起个名字",
+              value: $data.form.name,
+              onInput: _cache[1] || (_cache[1] = ($event) => $options.handleInput($event, "name"))
+            }, null, 40, ["value"])
+          ]),
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.createElementVNode("text", { class: "form-label" }, "伙伴性别"),
+            vue.createElementVNode(
+              "radio-group",
+              {
+                class: "form-radio-group",
+                onChange: _cache[2] || (_cache[2] = (...args) => $options.onGenderChange && $options.onGenderChange(...args))
+              },
+              [
+                vue.createElementVNode("label", { class: "radio" }, [
+                  vue.createElementVNode("radio", {
+                    value: "MALE",
+                    checked: $data.form.gender === "MALE"
+                  }, null, 8, ["checked"]),
+                  vue.createTextVNode("男 ")
+                ]),
+                vue.createElementVNode("label", { class: "radio" }, [
+                  vue.createElementVNode("radio", {
+                    value: "FEMALE",
+                    checked: $data.form.gender === "FEMALE"
+                  }, null, 8, ["checked"]),
+                  vue.createTextVNode("女 ")
+                ]),
+                vue.createElementVNode("label", { class: "radio" }, [
+                  vue.createElementVNode("radio", {
+                    value: "NONE",
+                    checked: $data.form.gender === "NONE"
+                  }, null, 8, ["checked"]),
+                  vue.createTextVNode("保密 ")
+                ])
+              ],
+              32
+              /* NEED_HYDRATION */
+            )
+          ]),
+          vue.createElementVNode("view", { class: "form-item column" }, [
+            vue.createElementVNode("text", { class: "form-label" }, "角色设定 (Instructions)"),
+            vue.createElementVNode("view", { class: "textarea-wrapper" }, [
+              vue.createElementVNode("textarea", {
+                class: "scroll-textarea",
+                value: $data.form.instructions,
+                placeholder: "简短描述角色的性格/背景/说话风格（建议 50-300 字）",
+                "show-count": true,
+                maxlength: 1e3,
+                onInput: _cache[3] || (_cache[3] = ($event) => $options.handleInput($event, "instructions")),
+                "adjust-position": true
+              }, null, 40, ["value"])
+            ])
+          ]),
+          vue.createElementVNode("view", { class: "form-item column" }, [
+            vue.createElementVNode("text", { class: "form-label" }, "示例对话 (Seed)"),
+            vue.createElementVNode("view", { class: "textarea-wrapper" }, [
+              vue.createElementVNode("textarea", {
+                class: "scroll-textarea",
+                value: $data.form.seed,
+                placeholder: "角色与用户的一个小对话示例（建议 20-100 字）",
+                "show-count": true,
+                maxlength: 500,
+                onInput: _cache[4] || (_cache[4] = ($event) => $options.handleInput($event, "seed")),
+                "adjust-position": true
+              }, null, 40, ["value"])
+            ])
+          ]),
+          vue.createElementVNode("button", {
+            class: "submit-btn",
+            onClick: _cache[5] || (_cache[5] = (...args) => $options.handleSubmit && $options.handleSubmit(...args)),
+            disabled: $data.isSubmitting
+          }, "保存伙伴", 8, ["disabled"])
+        ],
+        4
+        /* STYLE */
+      )
     ]);
   }
-  const PagesLoginLogin = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["render", _sfc_render$6], ["__scopeId", "data-v-e4e4508d"], ["__file", "D:/HBuilderX/项目/ai情感陪伴/pages/login/login.vue"]]);
+  const PagesLoginLogin = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["render", _sfc_render$6], ["__file", "D:/HBuilderX/项目/ai情感陪伴/pages/login/login.vue"]]);
   const fontData = [
     {
       "font_class": "arrow-down",
@@ -3788,16 +3952,20 @@ This will fail in production if not fixed.`);
           id: null,
           name: "",
           description: "",
+          // ⬅️ 【修正】初始化为空
           instructions: "",
           seed: "",
           src: "",
           gender: "NONE"
         },
         mode: "create",
-        isSubmitting: false
+        isSubmitting: false,
+        statusBarHeight: 0
       };
     },
     onLoad(options) {
+      const systemInfo = uni.getSystemInfoSync();
+      this.statusBarHeight = systemInfo.statusBarHeight || 0;
       if (options.mode === "edit" && options.id) {
         this.mode = "edit";
         this.form.id = options.id;
@@ -3805,10 +3973,9 @@ This will fail in production if not fixed.`);
         this.loadCompanionData(options.id);
       } else {
         this.mode = "create";
-        this.form = { id: null, name: "", description: "一个新建的AI伙伴", instructions: "", seed: "", src: "", gender: "NONE" };
+        this.form = { id: null, name: "", description: "", instructions: "", seed: "", src: "", gender: "NONE" };
         uni.setNavigationBarTitle({ title: "创建新的AI伙伴" });
       }
-      चींटी(Chīṇṭī);
     },
     methods: {
       async loadCompanionData(companionId) {
@@ -3851,10 +4018,10 @@ This will fail in production if not fixed.`);
         const dataToSubmit = {
           name: this.form.name,
           description: this.form.description,
+          // ⬅️ 字段已包含在内
           instructions: this.form.instructions,
           seed: this.form.seed || `我是${this.form.name}，很高兴认识你！`,
           src: this.form.src
-          // gender 字段后端 companion schema 中没有，暂时不提交
         };
         this.isSubmitting = true;
         uni.showLoading({ title: "正在保存..." });
@@ -3872,7 +4039,7 @@ This will fail in production if not fixed.`);
             uni.navigateBack();
           }, 1500);
         } catch (err) {
-          formatAppLog("error", "at pages/companion-form/companion-form.vue:174", "保存伙伴失败", err);
+          formatAppLog("error", "at pages/companion-form/companion-form.vue:180", "保存伙伴失败", err);
           uni.showToast({ title: "保存失败", icon: "none" });
         } finally {
           uni.hideLoading();
@@ -3882,93 +4049,115 @@ This will fail in production if not fixed.`);
     }
   };
   function _sfc_render$2(_ctx, _cache, $props, $setup, $data, $options) {
-    return vue.openBlock(), vue.createElementBlock("view", { class: "form-container" }, [
-      vue.createElementVNode("view", { class: "form-item" }, [
-        vue.createElementVNode("text", { class: "form-label" }, "伙伴头像"),
-        vue.createElementVNode("image", {
-          class: "avatar-uploader",
-          src: $data.form.src || "/static/images/default-avatar.png",
-          onClick: _cache[0] || (_cache[0] = (...args) => $options.chooseAvatar && $options.chooseAvatar(...args)),
-          mode: "aspectFill"
-        }, null, 8, ["src"])
-      ]),
-      vue.createElementVNode("view", { class: "form-item" }, [
-        vue.createElementVNode("text", { class: "form-label" }, "伙伴昵称"),
-        vue.createElementVNode("input", {
-          class: "form-input",
-          placeholder: "给你的伙伴起个名字",
-          value: $data.form.name,
-          onInput: _cache[1] || (_cache[1] = ($event) => $options.handleInput($event, "name"))
-        }, null, 40, ["value"])
-      ]),
-      vue.createElementVNode("view", { class: "form-item" }, [
-        vue.createElementVNode("text", { class: "form-label" }, "伙伴性别"),
-        vue.createElementVNode(
-          "radio-group",
-          {
-            class: "form-radio-group",
-            onChange: _cache[2] || (_cache[2] = (...args) => $options.onGenderChange && $options.onGenderChange(...args))
-          },
-          [
-            vue.createElementVNode("label", { class: "radio" }, [
-              vue.createElementVNode("radio", {
-                value: "MALE",
-                checked: $data.form.gender === "MALE"
-              }, null, 8, ["checked"]),
-              vue.createTextVNode("男 ")
-            ]),
-            vue.createElementVNode("label", { class: "radio" }, [
-              vue.createElementVNode("radio", {
-                value: "FEMALE",
-                checked: $data.form.gender === "FEMALE"
-              }, null, 8, ["checked"]),
-              vue.createTextVNode("女 ")
-            ]),
-            vue.createElementVNode("label", { class: "radio" }, [
-              vue.createElementVNode("radio", {
-                value: "NONE",
-                checked: $data.form.gender === "NONE"
-              }, null, 8, ["checked"]),
-              vue.createTextVNode("保密 ")
+    return vue.openBlock(), vue.createElementBlock("view", null, [
+      vue.createElementVNode("view", { class: "global-bg" }),
+      vue.createTextVNode(),
+      vue.createElementVNode(
+        "view",
+        {
+          class: "form-container",
+          style: vue.normalizeStyle({ paddingTop: $data.statusBarHeight + 35 + "px" })
+        },
+        [
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.createElementVNode("text", { class: "form-label" }, "伙伴头像"),
+            vue.createElementVNode("image", {
+              class: "avatar-uploader",
+              src: $data.form.src || "/static/default-avatar.png",
+              onClick: _cache[0] || (_cache[0] = (...args) => $options.chooseAvatar && $options.chooseAvatar(...args)),
+              mode: "aspectFill"
+            }, null, 8, ["src"])
+          ]),
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.createElementVNode("text", { class: "form-label" }, "伙伴昵称"),
+            vue.createElementVNode("input", {
+              class: "form-input",
+              placeholder: "给你的伙伴起个名字",
+              value: $data.form.name,
+              onInput: _cache[1] || (_cache[1] = ($event) => $options.handleInput($event, "name"))
+            }, null, 40, ["value"])
+          ]),
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.createElementVNode("text", { class: "form-label" }, "伙伴描述"),
+            vue.createElementVNode("input", {
+              class: "form-input",
+              placeholder: "展示在主页列表的伙伴描述",
+              value: $data.form.description,
+              onInput: _cache[2] || (_cache[2] = ($event) => $options.handleInput($event, "description"))
+            }, null, 40, ["value"])
+          ]),
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.createElementVNode("text", { class: "form-label" }, "伙伴性别"),
+            vue.createElementVNode(
+              "radio-group",
+              {
+                class: "form-radio-group",
+                onChange: _cache[3] || (_cache[3] = (...args) => $options.onGenderChange && $options.onGenderChange(...args))
+              },
+              [
+                vue.createElementVNode("label", { class: "radio" }, [
+                  vue.createElementVNode("radio", {
+                    value: "MALE",
+                    checked: $data.form.gender === "MALE"
+                  }, null, 8, ["checked"]),
+                  vue.createTextVNode("男 ")
+                ]),
+                vue.createElementVNode("label", { class: "radio" }, [
+                  vue.createElementVNode("radio", {
+                    value: "FEMALE",
+                    checked: $data.form.gender === "FEMALE"
+                  }, null, 8, ["checked"]),
+                  vue.createTextVNode("女 ")
+                ]),
+                vue.createElementVNode("label", { class: "radio" }, [
+                  vue.createElementVNode("radio", {
+                    value: "NONE",
+                    checked: $data.form.gender === "NONE"
+                  }, null, 8, ["checked"]),
+                  vue.createTextVNode("保密 ")
+                ])
+              ],
+              32
+              /* NEED_HYDRATION */
+            )
+          ]),
+          vue.createElementVNode("view", { class: "form-item column" }, [
+            vue.createElementVNode("text", { class: "form-label" }, "角色设定 (Instructions)"),
+            vue.createElementVNode("view", { class: "textarea-wrapper" }, [
+              vue.createElementVNode("textarea", {
+                class: "scroll-textarea",
+                value: $data.form.instructions,
+                placeholder: "简短描述角色的性格/背景/说话风格（建议 50-300 字）",
+                "show-count": true,
+                maxlength: 1e3,
+                onInput: _cache[4] || (_cache[4] = ($event) => $options.handleInput($event, "instructions")),
+                "adjust-position": true
+              }, null, 40, ["value"])
             ])
-          ],
-          32
-          /* NEED_HYDRATION */
-        )
-      ]),
-      vue.createElementVNode("view", { class: "form-item column" }, [
-        vue.createElementVNode("text", { class: "form-label" }, "角色设定 (Instructions)"),
-        vue.createElementVNode("view", { class: "textarea-wrapper" }, [
-          vue.createElementVNode("textarea", {
-            class: "scroll-textarea",
-            value: $data.form.instructions,
-            placeholder: "简短描述角色的性格/背景/说话风格（建议 50-300 字）",
-            "show-count": true,
-            maxlength: 1e3,
-            onInput: _cache[3] || (_cache[3] = ($event) => $options.handleInput($event, "instructions")),
-            "adjust-position": true
-          }, null, 40, ["value"])
-        ])
-      ]),
-      vue.createElementVNode("view", { class: "form-item column" }, [
-        vue.createElementVNode("text", { class: "form-label" }, "示例对话 (Seed)"),
-        vue.createElementVNode("view", { class: "textarea-wrapper" }, [
-          vue.createElementVNode("textarea", {
-            class: "scroll-textarea",
-            value: $data.form.seed,
-            placeholder: "角色与用户的一个小对话示例（建议 20-100 字）",
-            "show-count": true,
-            maxlength: 500,
-            onInput: _cache[4] || (_cache[4] = ($event) => $options.handleInput($event, "seed")),
-            "adjust-position": true
-          }, null, 40, ["value"])
-        ])
-      ]),
-      vue.createElementVNode("button", {
-        class: "submit-btn",
-        onClick: _cache[5] || (_cache[5] = (...args) => $options.handleSubmit && $options.handleSubmit(...args)),
-        disabled: $data.isSubmitting
-      }, "保存伙伴", 8, ["disabled"])
+          ]),
+          vue.createElementVNode("view", { class: "form-item column" }, [
+            vue.createElementVNode("text", { class: "form-label" }, "示例对话 (Seed)"),
+            vue.createElementVNode("view", { class: "textarea-wrapper" }, [
+              vue.createElementVNode("textarea", {
+                class: "scroll-textarea",
+                value: $data.form.seed,
+                placeholder: "角色与用户的一个小对话示例（建议 20-100 字）",
+                "show-count": true,
+                maxlength: 500,
+                onInput: _cache[5] || (_cache[5] = ($event) => $options.handleInput($event, "seed")),
+                "adjust-position": true
+              }, null, 40, ["value"])
+            ])
+          ]),
+          vue.createElementVNode("button", {
+            class: "submit-btn",
+            onClick: _cache[6] || (_cache[6] = (...args) => $options.handleSubmit && $options.handleSubmit(...args)),
+            disabled: $data.isSubmitting
+          }, "保存伙伴", 8, ["disabled"])
+        ],
+        4
+        /* STYLE */
+      )
     ]);
   }
   const PagesCompanionFormCompanionForm = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["render", _sfc_render$2], ["__file", "D:/HBuilderX/项目/ai情感陪伴/pages/companion-form/companion-form.vue"]]);
@@ -4198,7 +4387,12 @@ This will fail in production if not fixed.`);
       const companionId = vue.ref(null);
       const companionName = vue.ref("");
       const companionStore = useCompanionStore();
-      onLoad((options) => {
+      const statusBarHeight = vue.ref(0);
+      const companionDescription = vue.ref("");
+      const isSaving = vue.ref(false);
+      onLoad(async (options) => {
+        const systemInfo = uni.getSystemInfoSync();
+        statusBarHeight.value = systemInfo.statusBarHeight || 0;
         if (!options.id) {
           uni.showToast({ title: "参数错误", icon: "none" });
           uni.navigateBack();
@@ -4206,7 +4400,43 @@ This will fail in production if not fixed.`);
         }
         companionId.value = options.id;
         companionName.value = options.name || "";
+        await loadCompanionDetails(options.id);
       });
+      const loadCompanionDetails = async (id) => {
+        uni.showLoading({ title: "加载中" });
+        try {
+          const data = await getCompanionById(id);
+          companionDescription.value = data.description || "";
+        } catch (error) {
+          formatAppLog("error", "at pages/knowledge-base/knowledge-base.vue:86", "加载伙伴详情失败:", error);
+          uni.showToast({ title: "加载描述失败", icon: "none" });
+        } finally {
+          uni.hideLoading();
+        }
+      };
+      const saveCompanionDescription = async () => {
+        if (isSaving.value)
+          return;
+        const newDescription = companionDescription.value.trim();
+        if (!newDescription) {
+          uni.showToast({ title: "备注不能为空", icon: "none" });
+          return;
+        }
+        isSaving.value = true;
+        uni.showLoading({ title: "保存中" });
+        try {
+          const updateData = { description: newDescription };
+          await updateCompanion(companionId.value, updateData);
+          uni.showToast({ title: "备注保存成功！", icon: "success" });
+          companionStore.fetchCompanions();
+        } catch (error) {
+          formatAppLog("error", "at pages/knowledge-base/knowledge-base.vue:115", "保存描述失败:", error);
+          uni.showToast({ title: "保存失败，请重试", icon: "none" });
+        } finally {
+          uni.hideLoading();
+          isSaving.value = false;
+        }
+      };
       const navigateToKnowledgeSettings = () => {
         uni.navigateTo({
           url: `/pages/companion-settings/companion-settings?id=${companionId.value}`
@@ -4230,41 +4460,73 @@ This will fail in production if not fixed.`);
           }
         });
       };
-      const __returned__ = { companionId, companionName, companionStore, navigateToKnowledgeSettings, navigateToEditPersona, onDeleteCompanion, ref: vue.ref, get onLoad() {
+      const __returned__ = { companionId, companionName, companionStore, statusBarHeight, companionDescription, isSaving, loadCompanionDetails, saveCompanionDescription, navigateToKnowledgeSettings, navigateToEditPersona, onDeleteCompanion, ref: vue.ref, get onLoad() {
         return onLoad;
       }, get useCompanionStore() {
         return useCompanionStore;
+      }, get companionApi() {
+        return companionApi;
       } };
       Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
       return __returned__;
     }
   };
   function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
-    return vue.openBlock(), vue.createElementBlock("view", null, [
-      vue.createElementVNode("view", { class: "settings-container" }, [
-        vue.createElementVNode("view", { class: "menu-group" }, [
-          vue.createElementVNode("view", {
-            class: "menu-item",
-            onClick: $setup.navigateToKnowledgeSettings
-          }, [
-            vue.createElementVNode("text", { class: "menu-label" }, "知识库管理"),
-            vue.createElementVNode("image", {
-              class: "arrow-icon",
-              src: _imports_0
-            })
+    return vue.openBlock(), vue.createElementBlock("view", { class: "page-wrapper" }, [
+      vue.createElementVNode("view", { class: "global-bg" }),
+      vue.createElementVNode(
+        "view",
+        {
+          class: "settings-container",
+          style: vue.normalizeStyle({ paddingTop: $setup.statusBarHeight + 30 + "px" })
+        },
+        [
+          vue.createElementVNode("view", { class: "menu-group" }, [
+            vue.createElementVNode("view", {
+              class: "menu-item",
+              onClick: $setup.navigateToKnowledgeSettings
+            }, [
+              vue.createElementVNode("text", { class: "menu-label" }, "知识库管理"),
+              vue.createElementVNode("image", {
+                class: "arrow-icon",
+                src: _imports_0
+              })
+            ]),
+            vue.createElementVNode("view", {
+              class: "menu-item",
+              onClick: $setup.navigateToEditPersona
+            }, [
+              vue.createElementVNode("text", { class: "menu-label" }, "修改人设"),
+              vue.createElementVNode("image", {
+                class: "arrow-icon",
+                src: _imports_0
+              })
+            ])
           ]),
-          vue.createElementVNode("view", {
-            class: "menu-item",
-            onClick: $setup.navigateToEditPersona
-          }, [
-            vue.createElementVNode("text", { class: "menu-label" }, "修改人设"),
-            vue.createElementVNode("image", {
-              class: "arrow-icon",
-              src: _imports_0
-            })
+          vue.createElementVNode("view", { class: "description-edit-card" }, [
+            vue.createElementVNode("text", { class: "card-title" }, "主页伙伴备注/描述"),
+            vue.createElementVNode("view", { class: "input-row" }, [
+              vue.withDirectives(vue.createElementVNode("input", {
+                class: "desc-input",
+                placeholder: "请输入主页列表中的伙伴备注",
+                "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => $setup.companionDescription = $event),
+                disabled: $setup.isSaving,
+                maxlength: "50"
+              }, null, 8, ["disabled"]), [
+                [vue.vModelText, $setup.companionDescription]
+              ]),
+              vue.createElementVNode("button", {
+                class: "save-btn",
+                disabled: $setup.isSaving || !$setup.companionDescription.trim(),
+                onClick: $setup.saveCompanionDescription
+              }, vue.toDisplayString($setup.isSaving ? "保存中" : "保存"), 9, ["disabled"])
+            ]),
+            vue.createElementVNode("view", { class: "desc-tip" }, "此内容将显示在主页伙伴列表的名称下方。")
           ])
-        ])
-      ]),
+        ],
+        4
+        /* STYLE */
+      ),
       vue.createElementVNode("view", { class: "danger-zone" }, [
         vue.createElementVNode("view", { class: "danger-zone-title" }, "危险操作"),
         vue.createElementVNode("button", {

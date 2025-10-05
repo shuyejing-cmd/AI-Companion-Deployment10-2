@@ -67,13 +67,13 @@ export const useUserStore = defineStore('user', {
         },
 
         logout() {
-            this.token = null;
-            uni.removeStorageSync('token');
-            // 【建议】同理，这里的 UI 操作也应由页面发起
-            uni.showToast({ title: '已退出登录', icon: 'none' });
-            uni.reLaunch({
-                url: '/pages/login/login'
-            });
-        }
+                    this.token = null;
+                    uni.removeStorageSync('token');
+                    // 【确认】这里的 uni.reLaunch 才是彻底解决问题的关键
+                    uni.showToast({ title: '已退出登录', icon: 'none' });
+                    uni.reLaunch({
+                        url: '/pages/login/login'
+                    });
+                }
     }
 });

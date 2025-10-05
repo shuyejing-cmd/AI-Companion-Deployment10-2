@@ -35,11 +35,12 @@ const request = (options) => {
                 } else if (res.statusCode === 401) {
                     console.error('响应拦截器：收到401，认证失败');
                     if(userStore) {
-                        userStore.logout();
-                    } else {
-                        // 如果连 store 都获取不到，直接跳转
-                        uni.reLaunch({ url: '/pages/login/login' });
-                    }
+                            // userStore.logout() 内部应包含 uni.reLaunch 到登录页
+                            userStore.logout(); 
+                        } else {
+                            // 如果 store 都获取不到，只能直接跳转（兜底方案）
+                            uni.reLaunch({ url: '/pages/login/login' });
+                        }
                     reject(res.data);
                 } else {
                     console.error(`响应拦截器：请求失败，状态码 ${res.statusCode}`);

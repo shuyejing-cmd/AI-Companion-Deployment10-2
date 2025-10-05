@@ -34,6 +34,7 @@
     },
     "popGesture": "close",
     "launchwebview": {
+      "render": "always",
       "id": "1",
       "kernel": "WKWebview"
     },
@@ -73,18 +74,12 @@
     "statusbar": {
       "immersed": "supportedDevice",
       "style": "dark",
-      "background": "#FFFFFF"
+      "background": "#000000"
     },
     "uniStatistics": {
       "enable": false
     },
     "allowsInlineMediaPlayback": true,
-    "safearea": {
-      "background": "#ffffff",
-      "bottom": {
-        "offset": "auto"
-      }
-    },
     "uni-app": {
       "control": "uni-v3",
       "vueVersion": "3",
@@ -98,30 +93,6 @@
       "webView": {
         "minUserAgentVersion": "49.0"
       }
-    },
-    "tabBar": {
-      "position": "bottom",
-      "color": "#7A7E83",
-      "selectedColor": "#007AFF",
-      "borderStyle": "rgba(0,0,0,0.4)",
-      "blurEffect": "none",
-      "fontSize": "10px",
-      "iconWidth": "24px",
-      "spacing": "3px",
-      "height": "50px",
-      "list": [
-        {
-          "pagePath": "pages/index/index",
-          "text": "伙伴"
-        }
-      ],
-      "backgroundColor": "#ffffff",
-      "selectedIndex": 0,
-      "shown": true,
-      "child": [
-        "lauchwebview"
-      ],
-      "selected": 0
     }
   },
   "app-harmony": {
@@ -131,12 +102,6 @@
     },
     "uniStatistics": {
       "enable": false
-    },
-    "safearea": {
-      "background": "#ffffff",
-      "bottom": {
-        "offset": "auto"
-      }
     }
   },
   "locale": "zh-Hans",

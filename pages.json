@@ -5,66 +5,48 @@
 			"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
 		}
 	},
-	"pages": [ 
+	"pages": [
 		{
 			"path": "pages/index/index",
-			"style": { "navigationBarTitleText": "我的伙伴" }
+			"style": {
+				"navigationStyle": "custom"
+			}
 		},
 		{
 			"path": "pages/chat/chat",
-			"style": { "navigationBarTitleText": "聊天" }
+			"style": {
+				"navigationStyle": "custom"
+			}
 		},
 		{
 			"path": "pages/login/login",
-			"style": { "navigationBarTitleText": "登录" }
+			"style": {
+				"navigationStyle": "custom"
+			}
 		},
 		{
 			"path": "pages/register/register",
-			"style": { "navigationBarTitleText": "注册" }
+			"style": {
+				"navigationStyle": "custom"
+			}
 		},
 		{
 			"path": "pages/companion-form/companion-form",
-			"style": { "navigationBarTitleText": "创建角色" }
+			"style": {
+				"navigationStyle": "custom"
+			}
 		},
 		{
 			"path": "pages/companion-settings/companion-settings",
-			"style": { "navigationBarTitleText": "角色设置" }
+			"style": {
+				"navigationStyle": "custom"
+			}
 		},
 		{
 			"path": "pages/knowledge-base/knowledge-base",
-			"style": { "navigationBarTitleText": "知识库" }
-		}
-		// 如果您有“我的”页面，也在这里注册
-		// {
-		// 	"path": "pages/profile/profile",
-		// 	"style": { "navigationBarTitleText": "我的" }
-		// }
-	],
-	"globalStyle": {
-		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "AI 情感陪伴",
-		"navigationBarBackgroundColor": "#FFFFFF",
-		"backgroundColor": "#F8F8F8"
-	},
-	"tabBar": {
-		"color": "#7A7E83",
-		"selectedColor": "#007AFF",
-		"borderStyle": "black",
-		"backgroundColor": "#ffffff",
-		"list": [
-			{
-				"pagePath": "pages/index/index",
-				"text": "伙伴"
-				// "iconPath": "static/tabbar/home.png", // 您需要准备图标
-				// "selectedIconPath": "static/tabbar/home_active.png"
+			"style": {
+				"navigationStyle": "custom"
 			}
-			// 如果有“我的”页面，在这里添加第二项
-			// {
-			// 	"pagePath": "pages/profile/profile",
-			// 	"text": "我的"
-			// 	// "iconPath": "static/tabbar/profile.png",
-			// 	// "selectedIconPath": "static/tabbar/profile_active.png"
-			// }
-		]
-	}
+		}
+	]
 }

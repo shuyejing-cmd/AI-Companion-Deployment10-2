@@ -34,3 +34,13 @@ export function loginRequest(data) {
     });
 }
 
+/**
+ * 获取当前用户信息请求
+ * 注意：请根据你的实际接口文档确认此路径是否正确
+ */
+export function getUserInfoRequest() {
+    return request({
+        url: '/api/v1/users/me', // 这是一个常见的实践，请与后端开发者确认
+        method: 'GET'
+    });
+}

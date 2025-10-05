@@ -3,11 +3,11 @@
 		<view class="custom-nav-bar" :style="{ paddingTop: statusBarHeight + 'px' }">
 			<view class="nav-bar-content">
 				<view class="back-button" @click="navigateBack">
-					<image class="back-icon" src="/static/images/back-arrow-icon.png" />
+					<image class="back-icon" src="/static/back-arrow-icon.png" />
 				</view>
 				<view class="title-container" @click="navigateToSettings">
 					<text class="nav-bar-title">{{ companionName }}</text>
-					<image class="settings-entry-icon" src="/static/images/right-arrow-icon.png" />
+					<image class="settings-entry-icon" src="/static/right-arrow-icon.png" />
 				</view>
 			</view>
 		</view>
@@ -16,10 +16,12 @@
 
 		<scroll-view
 			class="chat-container"
-			:style="{ paddingTop: navBarHeight + 'px', paddingBottom: inputBarHeight + 'px' }"
-			:scroll-y="true"
-			:scroll-top="scrollTop"
-			:scroll-with-animation="true"
+			    :style="{ 
+			        paddingTop: navBarHeight + 'px', 
+			        paddingBottom: (inputBarHeight + keyboardHeight) + 'px'  }"
+			    :scroll-y="true"
+			    :scroll-top="scrollTop"
+			    :scroll-with-animation="true"
 		>
 			<view class="message-list">
 				<block v-for="item in messages" :key="item._id">
@@ -47,6 +49,7 @@
 				    :disabled="isSending"
 				    :adjust-position="false"
 				    cursor-spacing="20"
+					@focus="handleFocus"  @blur="handleBlur"
 				/>
 				<button class="send-button" @click="handleSend" :disabled="isSending || !inputValue.trim()">发送</button>
 			</view>
@@ -55,8 +58,7 @@
 </template>
 
 <script setup>
-// 【新增】导入 watch 和 nextTick
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch, nextTick, getCurrentInstance } from 'vue';
 import { onLoad, onUnload } from '@dcloudio/uni-app';
 import { storeToRefs } from 'pinia';
 import { useChatStore } from '@/stores/chatStore.js';
@@ -67,41 +69,48 @@ const companionName = ref('');
 const companionAvatar = ref('');
 const userAvatar = ref('/static/images/user-avatar.png');
 const inputValue = ref('');
-// 【新】scrollTop 作为页面的本地 UI 状态
-const scrollTop = ref(0);
+const scrollTop = ref(0); // 滚动条位置，用于滚动到底部
 
 // --- Pinia Store ---
 const chatStore = useChatStore();
-// 【修正】不再从 store 中解构 scrollTop
 const { messages, isSending } = storeToRefs(chatStore);
 
-// --- 动态高度 ---
+// --- 动态高度（用于 UI 布局的计算） ---
 const statusBarHeight = ref(0);
 const navBarHeight = ref(0);
-const inputBarHeight = ref(50); // 默认值
+const inputBarHeight = ref(50); // 输入栏容器的最终高度（包含底部安全区）
+const keyboardHeight = ref(0); // 【关键】动态获取的键盘高度 (px)
 
 // --- 方法定义 ---
+
+// 1. 高度计算 (在 onLoad 后执行)
 const calculateHeights = () => {
-	const systemInfo = uni.getSystemInfoSync();
-	statusBarHeight.value = systemInfo.statusBarHeight;
-	// H5/App 等平台的导航栏高度
-	// #ifndef MP-WEIXIN
-	navBarHeight.value = systemInfo.statusBarHeight + 44;
-	// #endif
-	// 微信小程序的导航栏高度
-	// #ifdef MP-WEIXIN
-	const menuButtonInfo = uni.getMenuButtonBoundingClientRect();
-	navBarHeight.value = menuButtonInfo.bottom + menuButtonInfo.top - systemInfo.statusBarHeight;
-	// #endif
-	
-	// 动态计算输入框高度，以适配不同设备的底部安全区域
-    uni.createSelectorQuery().in(this).select('#input-bar-container').boundingClientRect(data => {
-        if (data) {
-            inputBarHeight.value = data.height;
+    const systemInfo = uni.getSystemInfoSync();
+    statusBarHeight.value = systemInfo.statusBarHeight;
+    
+    // 兼容不同平台的导航栏高度计算
+    // #ifndef MP-WEIXIN
+    // H5/App 等平台：状态栏 + 44px
+    navBarHeight.value = systemInfo.statusBarHeight + 44;
+    // #endif
+    
+    // #ifdef MP-WEIXIN
+    // 微信小程序：胶囊按钮底部 - 状态栏高度 + 胶囊按钮顶部 (近似值)
+    const menuButtonInfo = uni.getMenuButtonBoundingClientRect();
+    navBarHeight.value = menuButtonInfo.bottom + menuButtonInfo.top - systemInfo.statusBarHeight;
+    // #endif
+    
+    // 【优化】动态计算输入框高度，确保 inputBarHeight 包含底部安全区域
+    // 移除 in(this) 避免 H5 兼容性问题，仅在 onLoad 确保 DOM 已渲染后调用。
+    uni.createSelectorQuery().select('#input-bar-container').boundingClientRect(data => {
+        if (data && data.height) {
+            // data.height 是包含 safe-area-inset-bottom 的最终高度
+            inputBarHeight.value = data.height; 
         }
     }).exec();
 };
 
+// 2. 消息发送
 const handleSend = () => {
     const content = inputValue.value.trim();
     if (content) {
@@ -110,6 +119,7 @@ const handleSend = () => {
     }
 };
 
+// 3. 导航操作
 const navigateBack = () => {
 	uni.navigateBack();
 };
@@ -120,26 +130,51 @@ const navigateToSettings = () => {
 	});
 };
 
-// 【新】滚动到底部的逻辑，作为页面的一个方法
+// 4. 【核心】键盘与滚动处理
+
+// 处理输入框聚焦：获取键盘高度并调整滚动
+const handleFocus = (e) => {
+    if (e.detail && e.detail.height) {
+        // uni-app 的 input:focus 得到的 height 是 px 单位
+        keyboardHeight.value = e.detail.height; 
+        
+        // 键盘弹出后，立即滚动到底部，防止输入框被遮挡
+        scrollToBottom();
+    }
+};
+
+// 处理输入框失焦：键盘收起，重置高度
+const handleBlur = () => {
+    // 键盘收起时，重置键盘高度为 0
+    keyboardHeight.value = 0;
+    
+    // 延迟滚动，确保键盘完全收起和 inputBarHeight 恢复正常
+    setTimeout(() => {
+        scrollToBottom();
+    }, 100);
+};
+
+// 滚动到底部的通用方法
 const scrollToBottom = () => {
-    // nextTick 确保在 DOM 渲染完成后再执行滚动操作
+    // nextTick 确保在 DOM 渲染或高度变化完成后再执行滚动操作
     nextTick(() => {
-        // 通过增加一个大数值来确保滚动条能到达底部
+        // 通过设置一个极大的值，确保滚动条能到达内容底部
         scrollTop.value += 99999;
     });
 };
 
 // --- 侦听器 ---
-// 【关键】使用 watch 侦听消息列表的变化, 自动滚动到底部
+
+// 【关键】侦听消息列表的变化, 自动滚动到底部
 watch(messages, (newMessages, oldMessages) => {
-    // 当新消息数组长度大于或等于旧消息数组时（即有新消息加入），执行滚动
-    if (newMessages.length >= oldMessages.length) {
+    // 只有在有新消息加入时才滚动，避免非必要滚动（如初始加载）
+    if (newMessages.length > oldMessages.length) {
         scrollToBottom();
     }
-}, { deep: true }); // deep: true 深度侦听，确保能监听到数组内部元素的变更
-
+}, { deep: true });
 
 // --- 生命周期钩子 ---
+
 onLoad((options) => {
 	if (!options.id) {
 		uni.showToast({ title: '参数错误', icon: 'none', duration: 2000, success: () => setTimeout(() => uni.navigateBack(), 2000) });
@@ -149,11 +184,13 @@ onLoad((options) => {
 	companionName.value = options.name || '聊天';
 	companionAvatar.value = options.avatar || '/static/images/default-avatar.png';
 
-	calculateHeights();
+    // 确保组件加载完成后再计算高度
+	calculateHeights(); 
+    
+    // 初始化聊天连接和历史记录
 	chatStore.initializeChat(options.id);
 });
 
-// 阶段一已添加：确保页面卸载时关闭 WebSocket 连接
 onUnload(() => {
     console.log('Chat page unloaded, closing WebSocket.');
     chatStore.closeChat();
